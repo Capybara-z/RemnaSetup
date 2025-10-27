@@ -82,8 +82,8 @@ install_remnanode() {
     sudo chown $USER:$USER /opt/remnanode
     cd /opt/remnanode
 
-    echo "APP_PORT=$APP_PORT" > .env
-    echo "$SSL_CERT_FULL" >> .env
+    echo "NODE_PORT=$APP_PORT" > .env
+    echo "SECRET_KEY=$SSL_CERT_FULL" >> .env
 
     cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
 
