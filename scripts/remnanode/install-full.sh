@@ -148,8 +148,8 @@ request_data() {
     if [[ "$SKIP_REMNANODE" != "true" ]]; then
         while true; do
             question "$(get_string "install_full_node_enter_app_port")"
-            APP_PORT="$REPLY"
-            if [[ "$APP_PORT" == "n" || "$APP_PORT" == "N" ]]; then
+            NODE_PORT="$REPLY"
+            if [[ "$NODE_PORT" == "n" || "$NODE_PORT" == "N" ]]; then
                 while true; do
                     question "$(get_string "install_full_node_confirm_skip_remnanode")"
                     CONFIRM="$REPLY"
@@ -166,8 +166,8 @@ request_data() {
                     break
                 fi
             fi
-            APP_PORT=${APP_PORT:-3001}
-            if [[ "$APP_PORT" =~ ^[0-9]+$ ]]; then
+            NODE_PORT=${NODE_PORT:-3001}
+            if [[ "$NODE_PORT" =~ ^[0-9]+$ ]]; then
                 break
             fi
             warn "$(get_string "install_full_node_port_must_be_number")"
@@ -176,8 +176,8 @@ request_data() {
         if [[ "$SKIP_REMNANODE" != "true" ]]; then
             while true; do
                 question "$(get_string "install_full_node_enter_ssl_cert")"
-                SSL_CERT_FULL="$REPLY"
-                if [[ "$SSL_CERT_FULL" == "n" || "$SSL_CERT_FULL" == "N" ]]; then
+                SECRET_KEY="$REPLY"
+                if [[ "$SECRET_KEY" == "n" || "$SECRET_KEY" == "N" ]]; then
                     while true; do
                         question "$(get_string "install_full_node_confirm_skip_remnanode")"
                         CONFIRM="$REPLY"
@@ -193,7 +193,7 @@ request_data() {
                     if [[ "$SKIP_REMNANODE" == "true" ]]; then
                         break
                     fi
-                elif [[ -n "$SSL_CERT_FULL" ]]; then
+                elif [[ -n "$SECRET_KEY" ]]; then
                     break
                 fi
                 warn "$(get_string "install_full_node_ssl_cert_empty")"
@@ -595,8 +595,8 @@ install_remnanode() {
     sudo chown $USER:$USER /opt/remnanode
     cd /opt/remnanode
 
-    echo "APP_PORT=$APP_PORT" > .env
-    echo "$SSL_CERT_FULL" >> .env
+    echo "NODE_PORT=$NODE_PORT" > .env
+    echo "SECRET_KEY=$SECRET_KEY" >> .env
 
         info "$(get_string "install_full_node_using_standard_compose")"
         cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml

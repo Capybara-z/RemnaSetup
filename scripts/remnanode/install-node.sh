@@ -82,8 +82,8 @@ install_remnanode() {
     sudo chown $USER:$USER /opt/remnanode
     cd /opt/remnanode
 
-    echo "NODE_PORT=$APP_PORT" > .env
-    echo "SECRET_KEY=$SSL_CERT_FULL" >> .env
+    echo "NODE_PORT=$NODE_PORT" > .env
+    echo "SECRET_KEY=$SECRET_KEY" >> .env
 
     cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
 
@@ -102,9 +102,9 @@ main() {
 
     while true; do
         question "$(get_string "install_node_enter_app_port")"
-        APP_PORT="$REPLY"
-        APP_PORT=${APP_PORT:-3001}
-        if [[ "$APP_PORT" =~ ^[0-9]+$ ]]; then
+        NODE_PORT="$REPLY"
+        NODE_PORT=${NODE_PORT:-3001}
+        if [[ "$NODE_PORT" =~ ^[0-9]+$ ]]; then
             break
         fi
         warn "$(get_string "install_node_port_must_be_number")"
@@ -112,8 +112,8 @@ main() {
 
     while true; do
         question "$(get_string "install_node_enter_ssl_cert")"
-        SSL_CERT_FULL="$REPLY"
-        if [[ -n "$SSL_CERT_FULL" ]]; then
+        SECRET_KEY="$REPLY"
+        if [[ -n "$SECRET_KEY" ]]; then
             break
         fi
         warn "$(get_string "install_node_ssl_cert_empty")"
