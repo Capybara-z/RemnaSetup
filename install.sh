@@ -18,7 +18,7 @@ if ! command -v curl &> /dev/null; then
     echo "Installing curl..."
     echo "Установка curl..."
     if command -v apt-get &> /dev/null; then
-        apt update -y && apt install -y curl
+        apt-get update -y && apt-get install -y curl
     elif command -v yum &> /dev/null; then
         yum install -y curl
     elif command -v dnf &> /dev/null; then
@@ -49,11 +49,11 @@ if ! command -v unzip &> /dev/null; then
     if command -v apt-get &> /dev/null; then
         echo "Updating package list..."
         echo "Обновление списка пакетов..."
-        sudo apt update -y && sudo apt install -y unzip
+        apt-get update -y && apt-get install -y unzip
     elif command -v yum &> /dev/null; then
-        sudo yum install -y unzip
+        yum install -y unzip
     elif command -v dnf &> /dev/null; then
-        sudo dnf install -y unzip
+        dnf install -y unzip
     else
         echo "Failed to install unzip. Please install it manually."
         echo "Не удалось установить unzip. Пожалуйста, установите его вручную."
@@ -88,7 +88,19 @@ fi
 
 echo "Setting permissions..."
 echo "Установка прав доступа..."
-chown -R $SUDO_USER:$SUDO_USER /opt/remnasetup
+
+if [ -n "$SUDO_USER" ]; then
+    REAL_USER="$SUDO_USER"
+elif [ -n "$USER" ] && [ "$USER" != "root" ]; then
+    REAL_USER="$USER"
+else
+    REAL_USER=$(getent passwd 2>/dev/null | awk -F: '$3 >= 1000 && $3 < 65534 && $1 != "nobody" {print $1; exit}')
+    if [ -z "$REAL_USER" ]; then
+        REAL_USER="root"
+    fi
+fi
+
+chown -R "$REAL_USER:$REAL_USER" /opt/remnasetup
 chmod -R 755 /opt/remnasetup
 chmod +x /opt/remnasetup/remnasetup.sh
 chmod +x /opt/remnasetup/scripts/common/*.sh
