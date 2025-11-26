@@ -16,9 +16,9 @@ check_bbr() {
 
 install_bbr() {
     info "$(get_string "install_bbr_installing")"
-    echo "net.core.default_qdisc=fq" | sudo tee -a /etc/sysctl.conf
-    echo "net.ipv4.tcp_congestion_control=bbr" | sudo tee -a /etc/sysctl.conf
-    sudo sysctl -p
+    echo "net.core.default_qdisc=fq" | tee -a /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" | tee -a /etc/sysctl.conf
+    sysctl -p
     success "$(get_string "install_bbr_installed")"
 }
 

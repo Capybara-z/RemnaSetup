@@ -44,7 +44,7 @@ check_component() {
 install_docker() {
     if ! command -v docker &> /dev/null; then
         info "$(get_string "install_caddy_installing")"
-        sudo curl -fsSL https://get.docker.com | sh
+        curl -fsSL https://get.docker.com | sh
     fi
 }
 

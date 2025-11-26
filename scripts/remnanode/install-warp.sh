@@ -51,8 +51,8 @@ uninstall_warp_native() {
     rm -f wgcf-account.toml wgcf-profile.conf &>/dev/null
 
     info "$(get_string "warp_native_removing_packages")"
-    DEBIAN_FRONTEND=noninteractive apt remove --purge -y wireguard &>/dev/null || true
-    DEBIAN_FRONTEND=noninteractive apt autoremove -y &>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y wireguard &>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive apt-get autoremove -y &>/dev/null || true
 
     success "$(get_string "warp_native_uninstall_complete")"
 }
@@ -62,11 +62,11 @@ install_warp_native() {
     echo ""
 
     info "$(get_string "warp_native_install_wireguard")"
-    apt update -qq &>/dev/null || {
+    apt-get update -qq &>/dev/null || {
         error "$(get_string "warp_native_update_failed")"
         exit 1
     }
-    apt install wireguard -y &>/dev/null || {
+    apt-get install -y wireguard &>/dev/null || {
         error "$(get_string "warp_native_wireguard_failed")"
         exit 1
     }

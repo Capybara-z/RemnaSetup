@@ -15,7 +15,7 @@ check_docker() {
 
 install_docker() {
     info "$(get_string "install_node_installing_docker")"
-    sudo curl -fsSL https://get.docker.com | sh || {
+    curl -fsSL https://get.docker.com | sh || {
         error "$(get_string "install_node_docker_error")"
         exit 1
     }
@@ -26,19 +26,19 @@ setup_logs_and_logrotate() {
     info "$(get_string "install_node_setup_logs")"
 
     if [ ! -d "/var/log/remnanode" ]; then
-        sudo mkdir -p /var/log/remnanode
-        sudo chmod -R 777 /var/log/remnanode
+        mkdir -p /var/log/remnanode
+        chmod -R 777 /var/log/remnanode
         info "$(get_string "install_node_logs_dir_created")"
     else
         info "$(get_string "install_node_logs_dir_exists")"
     fi
 
     if ! command -v logrotate >/dev/null 2>&1; then
-        sudo apt update -y && sudo apt install logrotate -y
+        apt-get update -y && apt-get install -y logrotate
     fi
 
     if [ ! -f "/etc/logrotate.d/remnanode" ] || ! grep -q "copytruncate" /etc/logrotate.d/remnanode; then
-        sudo tee /etc/logrotate.d/remnanode > /dev/null <<EOF
+        tee /etc/logrotate.d/remnanode > /dev/null <<EOF
 /var/log/remnanode/*.log {
     size 50M
     rotate 5
@@ -77,9 +77,21 @@ check_remnanode() {
 
 install_remnanode() {
     info "$(get_string "install_node_installing")"
-    sudo chmod -R 777 /opt
+    chmod -R 777 /opt
     mkdir -p /opt/remnanode
-    sudo chown $USER:$USER /opt/remnanode
+
+    if [ -n "$SUDO_USER" ]; then
+        REAL_USER="$SUDO_USER"
+    elif [ -n "$USER" ] && [ "$USER" != "root" ]; then
+        REAL_USER="$USER"
+    else
+        REAL_USER=$(getent passwd 2>/dev/null | awk -F: '$3 >= 1000 && $3 < 65534 && $1 != "nobody" {print $1; exit}')
+        if [ -z "$REAL_USER" ]; then
+            REAL_USER="root"
+        fi
+    fi
+    
+    chown "$REAL_USER:$REAL_USER" /opt/remnanode
     cd /opt/remnanode
 
     echo "NODE_PORT=$NODE_PORT" > .env
@@ -87,7 +99,7 @@ install_remnanode() {
 
     cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
 
-    sudo docker compose up -d || {
+    docker compose up -d || {
         error "$(get_string "install_node_error")"
         exit 1
     }
@@ -97,7 +109,7 @@ install_remnanode() {
 main() {
     if check_remnanode; then
         cd /opt/remnanode
-        sudo docker compose down
+        docker compose down
     fi
 
     while true; do

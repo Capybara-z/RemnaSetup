@@ -14,7 +14,7 @@ check_docker() {
 
 install_docker() {
     info "$(get_string "install_full_node_installing_docker")"
-    sudo curl -fsSL https://get.docker.com | sh || {
+    curl -fsSL https://get.docker.com | sh || {
         error "$(get_string "install_full_node_docker_error")"
         exit 1
     }
@@ -271,8 +271,8 @@ uninstall_warp_native() {
     rm -f wgcf-account.toml wgcf-profile.conf &>/dev/null
 
     info "$(get_string "warp_native_removing_packages")"
-    DEBIAN_FRONTEND=noninteractive apt remove --purge -y wireguard &>/dev/null || true
-    DEBIAN_FRONTEND=noninteractive apt autoremove -y &>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y wireguard &>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive apt-get autoremove -y &>/dev/null || true
 
     success "$(get_string "warp_native_uninstall_complete")"
 }
@@ -282,11 +282,11 @@ install_warp() {
     echo ""
 
     info "$(get_string "warp_native_install_wireguard")"
-    apt update -qq &>/dev/null || {
+    apt-get update -qq &>/dev/null || {
         error "$(get_string "warp_native_update_failed")"
         exit 1
     }
-    apt install wireguard -y &>/dev/null || {
+    apt-get install -y wireguard &>/dev/null || {
         error "$(get_string "warp_native_wireguard_failed")"
         exit 1
     }
@@ -512,7 +512,10 @@ install_warp() {
 
 install_bbr() {
     info "$(get_string "install_full_node_installing_bbr")"
-    sudo sh -c 'modprobe tcp_bbr && sysctl net.ipv4.tcp_available_congestion_control && sysctl -w net.ipv4.tcp_congestion_control=bbr && echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf && sysctl -p'
+    modprobe tcp_bbr
+    echo "net.core.default_qdisc=fq" | tee -a /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" | tee -a /etc/sysctl.conf
+    sysctl -p
     success "$(get_string "install_full_node_bbr_installed_success")"
 }
 
@@ -520,19 +523,19 @@ setup_logs_and_logrotate() {
     info "$(get_string "install_full_node_setup_logs")"
 
     if [ ! -d "/var/log/remnanode" ]; then
-        sudo mkdir -p /var/log/remnanode
-        sudo chmod -R 777 /var/log/remnanode
+        mkdir -p /var/log/remnanode
+        chmod -R 777 /var/log/remnanode
         info "$(get_string "install_full_node_logs_dir_created")"
     else
         info "$(get_string "install_full_node_logs_dir_exists")"
     fi
 
     if ! command -v logrotate >/dev/null 2>&1; then
-        sudo apt update -y && sudo apt install logrotate -y
+        apt-get update -y && apt-get install -y logrotate
     fi
 
     if [ ! -f "/etc/logrotate.d/remnanode" ] || ! grep -q "copytruncate" /etc/logrotate.d/remnanode; then
-        sudo tee /etc/logrotate.d/remnanode > /dev/null <<EOF
+        tee /etc/logrotate.d/remnanode > /dev/null <<EOF
 /var/log/remnanode/*.log {
     size 50M
     rotate 5
@@ -550,19 +553,19 @@ EOF
 
 install_caddy() {
     info "$(get_string "install_full_node_installing_caddy")"
-    sudo apt install -y curl debian-keyring debian-archive-keyring apt-transport-https
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-    sudo apt update -y
-    sudo apt install -y caddy
+    apt-get install -y curl debian-keyring debian-archive-keyring apt-transport-https
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+    apt-get update -y
+    apt-get install -y caddy
 
     info "$(get_string "install_full_node_setup_site")"
-    sudo chmod -R 777 /var
+    chmod -R 777 /var
 
     if [ -d "/var/www/site" ]; then
-        sudo rm -rf /var/www/site/*
+        rm -rf /var/www/site/*
     else
-        sudo mkdir -p /var/www/site
+        mkdir -p /var/www/site
     fi
 
     RANDOM_META_ID=$(openssl rand -hex 16)
@@ -572,27 +575,39 @@ install_caddy() {
     META_NAMES=("render-id" "view-id" "page-id" "config-id")
     RANDOM_META_NAME=${META_NAMES[$RANDOM % ${#META_NAMES[@]}]}
     
-    sudo cp -r "/opt/remnasetup/data/site/"* /var/www/site/
+    cp -r "/opt/remnasetup/data/site/"* /var/www/site/
 
-    sudo sed -i "/<meta name=\"viewport\"/a \    <meta name=\"$RANDOM_META_NAME\" content=\"$RANDOM_META_ID\">\n    <!-- $RANDOM_COMMENT -->" /var/www/site/index.html
-    sudo sed -i "s/<body/<body class=\"$RANDOM_CLASS\"/" /var/www/site/index.html
+    sed -i "/<meta name=\"viewport\"/a \    <meta name=\"$RANDOM_META_NAME\" content=\"$RANDOM_META_ID\">\n    <!-- $RANDOM_COMMENT -->" /var/www/site/index.html
+    sed -i "s/<body/<body class=\"$RANDOM_CLASS\"/" /var/www/site/index.html
 
-    sudo sed -i "1i /* $RANDOM_COMMENT */" /var/www/site/assets/style.css
-    sudo sed -i "1i // $RANDOM_COMMENT" /var/www/site/assets/main.js
+    sed -i "1i /* $RANDOM_COMMENT */" /var/www/site/assets/style.css
+    sed -i "1i // $RANDOM_COMMENT" /var/www/site/assets/main.js
 
     info "$(get_string "install_full_node_updating_caddy_config")"
-    sudo cp "/opt/remnasetup/data/caddy/caddyfile-node" /etc/caddy/Caddyfile
-    sudo sed -i "s/\$DOMAIN/$DOMAIN/g" /etc/caddy/Caddyfile
-    sudo sed -i "s/\$MONITOR_PORT/$MONITOR_PORT/g" /etc/caddy/Caddyfile
-    sudo systemctl restart caddy
+    cp "/opt/remnasetup/data/caddy/caddyfile-node" /etc/caddy/Caddyfile
+    sed -i "s/\$DOMAIN/$DOMAIN/g" /etc/caddy/Caddyfile
+    sed -i "s/\$MONITOR_PORT/$MONITOR_PORT/g" /etc/caddy/Caddyfile
+    systemctl restart caddy
     success "$(get_string "install_full_node_caddy_installed_success")"
 }
 
 install_remnanode() {
     info "$(get_string "install_full_node_installing_remnanode")"
-    sudo chmod -R 777 /opt
+    chmod -R 777 /opt
     mkdir -p /opt/remnanode
-    sudo chown $USER:$USER /opt/remnanode
+
+    if [ -n "$SUDO_USER" ]; then
+        REAL_USER="$SUDO_USER"
+    elif [ -n "$USER" ] && [ "$USER" != "root" ]; then
+        REAL_USER="$USER"
+    else
+        REAL_USER=$(getent passwd 2>/dev/null | awk -F: '$3 >= 1000 && $3 < 65534 && $1 != "nobody" {print $1; exit}')
+        if [ -z "$REAL_USER" ]; then
+            REAL_USER="root"
+        fi
+    fi
+    
+    chown "$REAL_USER:$REAL_USER" /opt/remnanode
     cd /opt/remnanode
 
     echo "NODE_PORT=$NODE_PORT" > .env
@@ -601,7 +616,7 @@ install_remnanode() {
         info "$(get_string "install_full_node_using_standard_compose")"
         cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
 
-    sudo docker compose up -d || {
+    docker compose up -d || {
         error "$(get_string "install_full_node_remnanode_error")"
         exit 1
     }
@@ -617,7 +632,7 @@ main() {
     request_data
 
     info "$(get_string "install_full_node_updating_packages")"
-    sudo apt update -y
+    apt-get update -y
 
     if ! check_docker; then
         install_docker
@@ -637,8 +652,8 @@ main() {
     
     if [[ "$SKIP_CADDY" != "true" ]]; then
         if [[ "$UPDATE_CADDY" == "true" ]]; then
-            sudo systemctl stop caddy
-            sudo rm -f /etc/caddy/Caddyfile
+            systemctl stop caddy
+            rm -f /etc/caddy/Caddyfile
         fi
         install_caddy
     fi
@@ -648,7 +663,7 @@ main() {
     if [[ "$SKIP_REMNANODE" != "true" ]]; then
         if [[ "$UPDATE_REMNANODE" == "true" ]]; then
             cd /opt/remnanode
-            sudo docker compose down
+            docker compose down
             rm -f docker-compose.yml
         fi
         install_remnanode

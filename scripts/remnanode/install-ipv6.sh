@@ -15,7 +15,7 @@ check_ipv6_status() {
 disable_ipv6() {
     info "$(get_string "ipv6_disabling")"
     
-    sudo tee -a /etc/sysctl.conf > /dev/null << EOF
+    tee -a /etc/sysctl.conf > /dev/null << EOF
 
 # IPv6 Disable
 net.ipv6.conf.all.disable_ipv6 = 1
@@ -24,15 +24,15 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
 
     if [ -d "/proc/sys/net/ipv6/conf/tun0" ]; then
-        echo "net.ipv6.conf.tun0.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+        echo "net.ipv6.conf.tun0.disable_ipv6 = 1" | tee -a /etc/sysctl.conf
     fi
 
-    sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-    sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-    sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+    sysctl -w net.ipv6.conf.all.disable_ipv6=1
+    sysctl -w net.ipv6.conf.default.disable_ipv6=1
+    sysctl -w net.ipv6.conf.lo.disable_ipv6=1
     
     if [ -d "/proc/sys/net/ipv6/conf/tun0" ]; then
-        sudo sysctl -w net.ipv6.conf.tun0.disable_ipv6=1
+        sysctl -w net.ipv6.conf.tun0.disable_ipv6=1
     fi
     
     success "$(get_string "ipv6_disabled_success")"
@@ -41,14 +41,14 @@ EOF
 enable_ipv6() {
     info "$(get_string "ipv6_enabling")"
 
-    sudo sed -i '/^# IPv6 Disable$/,/^net\.ipv6\.conf\..*\.disable_ipv6 = 1$/d' /etc/sysctl.conf
+    sed -i '/^# IPv6 Disable$/,/^net\.ipv6\.conf\..*\.disable_ipv6 = 1$/d' /etc/sysctl.conf
 
-    sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
-    sudo sysctl -w net.ipv6.conf.default.disable_ipv6=0
-    sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=0
+    sysctl -w net.ipv6.conf.all.disable_ipv6=0
+    sysctl -w net.ipv6.conf.default.disable_ipv6=0
+    sysctl -w net.ipv6.conf.lo.disable_ipv6=0
     
     if [ -d "/proc/sys/net/ipv6/conf/tun0" ]; then
-        sudo sysctl -w net.ipv6.conf.tun0.disable_ipv6=0
+        sysctl -w net.ipv6.conf.tun0.disable_ipv6=0
     fi
     
     success "$(get_string "ipv6_enabled_success")"
