@@ -6,7 +6,7 @@
 
 ![RemnaSetup](https://img.shields.io/badge/RemnaSetup-2.5-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Platform](https://img.shields.io/badge/Platform-Ubuntu-orange)
+![Platform](https://img.shields.io/badge/Platform-Ubuntu%20%7C%20Debian-orange)
 
 **Универсальный скрипт для автоматической установки, настройки и обновления инфраструктуры Remnawave и Remnanode**
 
