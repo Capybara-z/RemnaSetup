@@ -1,11 +1,12 @@
 services:
-    remnanode:
-        container_name: remnanode
-        hostname: remnanode
-        image: remnawave/node:latest
-        restart: always
-        network_mode: host
-        env_file:
-            - .env
-        volumes:
-            - /var/log/remnanode:/var/log/remnanode
+  remnanode:
+    container_name: remnanode
+    hostname: remnanode
+    image: remnawave/node:latest
+    network_mode: host
+    restart: always
+    environment:
+      - NODE_PORT=$NODE_PORT
+      - SECRET_KEY=$SECRET_KEY
+    volumes:
+      - /var/log/remnanode:/var/log/remnanode

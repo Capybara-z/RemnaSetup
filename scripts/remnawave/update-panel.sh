@@ -8,6 +8,7 @@ update_panel() {
     info "$(get_string update_panel_updating)"
     cd /opt/remnawave
     docker compose pull
+    docker compose down
     docker compose up -d
     success "$(get_string update_panel_complete)"
 }

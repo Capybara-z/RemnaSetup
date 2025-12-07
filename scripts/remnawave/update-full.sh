@@ -9,10 +9,12 @@ update_all() {
     
     cd /opt/remnawave
     docker compose pull
+    docker compose down
     docker compose up -d
 
     cd /opt/remnawave/subscription
     docker compose pull
+    docker compose down
     docker compose up -d
     
     success "$(get_string update_full_complete)"

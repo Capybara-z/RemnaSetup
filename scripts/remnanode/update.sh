@@ -8,6 +8,7 @@ update_panel() {
     info "$(get_string "update_node_updating")"
     cd /opt/remnanode
     docker compose pull
+    docker compose down
     docker compose up -d
 }
 

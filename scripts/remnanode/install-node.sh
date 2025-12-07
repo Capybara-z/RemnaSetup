@@ -94,10 +94,10 @@ install_remnanode() {
     chown "$REAL_USER:$REAL_USER" /opt/remnanode
     cd /opt/remnanode
 
-    echo "NODE_PORT=$NODE_PORT" > .env
-    echo "SECRET_KEY=$SECRET_KEY" >> .env
-
     cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
+
+    sed -i "s|\$NODE_PORT|$NODE_PORT|g" docker-compose.yml
+    sed -i "s|\$SECRET_KEY|$SECRET_KEY|g" docker-compose.yml
 
     docker compose up -d || {
         error "$(get_string "install_node_error")"
@@ -110,6 +110,7 @@ main() {
     if check_remnanode; then
         cd /opt/remnanode
         docker compose down
+        rm -f .env
     fi
 
     while true; do

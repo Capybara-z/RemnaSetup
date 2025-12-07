@@ -8,6 +8,7 @@ update_subscription() {
     info "$(get_string update_subscription_updating)"
     cd /opt/remnawave/subscription
     docker compose pull
+    docker compose down
     docker compose up -d
     success "$(get_string update_subscription_complete)"
 }
