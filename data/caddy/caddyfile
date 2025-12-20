@@ -2,10 +2,6 @@ https://$PANEL_DOMAIN {
     reverse_proxy * http://remnawave:$PANEL_PORT
 }
 
-https://$SUB_DOMAIN {
-    reverse_proxy * http://remnawave-subscription-page:$SUB_PORT
-}
-
 :443 {
     tls internal
     respond 204

@@ -90,7 +90,7 @@
 <td width="50%" align="center">
 
 ### 1️⃣ Remnawave
-- 📦 Full installation (Remnawave + Subscription Page + Caddy)
+- 📦 Full installation (Remnawave + Caddy)
 - 🚀 Install Remnawave
 - 📄 Install Subscription Page
 - ⚙️ Install Caddy

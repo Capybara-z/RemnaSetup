@@ -74,7 +74,7 @@ display_remnawave_menu() {
     print_header
     menu "$(get_string "remnawave_menu")"
     if [ "$LANGUAGE" = "en" ]; then
-        echo -e "${BLUE}1. Full installation (Remnawave + Subscription Page + Caddy)${RESET}"
+        echo -e "${BLUE}1. Full installation (Remnawave + Caddy)${RESET}"
         echo -e "${BLUE}2. Install Remnawave${RESET}"
         echo -e "${BLUE}3. Install Subscription Page${RESET}"
         echo -e "${BLUE}4. Install Caddy${RESET}"
@@ -83,7 +83,7 @@ display_remnawave_menu() {
         echo -e "${BLUE}7. Update Subscription Page${RESET}"
         echo -e "${BLUE}8. Back${RESET}"
     else
-        echo -e "${BLUE}1. Полная установка (Remnawave + Страница подписок + Caddy)${RESET}"
+        echo -e "${BLUE}1. Полная установка (Remnawave + Caddy)${RESET}"
         echo -e "${BLUE}2. Установка Remnawave${RESET}"
         echo -e "${BLUE}3. Установка Страницы подписок${RESET}"
         echo -e "${BLUE}4. Установка Caddy${RESET}"

@@ -610,8 +610,8 @@ install_remnanode() {
     chown "$REAL_USER:$REAL_USER" /opt/remnanode
     cd /opt/remnanode
 
-    info "$(get_string "install_full_node_using_standard_compose")"
-    cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
+        info "$(get_string "install_full_node_using_standard_compose")"
+        cp "/opt/remnasetup/data/docker/node-compose.yml" docker-compose.yml
 
     sed -i "s|\$NODE_PORT|$NODE_PORT|g" docker-compose.yml
     sed -i "s|\$SECRET_KEY|$SECRET_KEY|g" docker-compose.yml

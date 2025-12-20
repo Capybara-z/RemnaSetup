@@ -90,7 +90,7 @@
 <td width="50%" align="center">
 
 ### 1️⃣ Remnawave
-- 📦 Полная установка (Remnawave + Страница подписок + Caddy)
+- 📦 Полная установка (Remnawave + Caddy)
 - 🚀 Установка Remnawave
 - 📄 Установка Страницы подписок
 - ⚙️ Установка Caddy
