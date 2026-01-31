@@ -54,7 +54,7 @@ install_caddy_for_subscription() {
 
         cat > Caddyfile << EOF
 https://$SUB_DOMAIN {
-    reverse_proxy * http://remnawave-subscription-page:$SUB_PORT
+    reverse_proxy * http://127.0.0.1:$SUB_PORT
 }
 
 :443 {
@@ -64,6 +64,10 @@ https://$SUB_DOMAIN {
 EOF
 
         cp "/opt/remnasetup/data/docker/caddy-compose.yml" docker-compose.yml
+
+        sed -i '/networks:/d' docker-compose.yml
+        sed -i '/- remnawave-network/d' docker-compose.yml
+        sed -i '/remnawave-network:/,/external: true/d' docker-compose.yml
         
         docker compose up -d
     else
@@ -78,17 +82,25 @@ update_caddyfile_with_subscription() {
         return 1
     fi
 
+    local proxy_target
+    if [ "$INSTALL_WITH_PANEL" = true ]; then
+        proxy_target="remnawave-subscription-page"
+    else
+        proxy_target="127.0.0.1"
+    fi
+
     if grep -q "https://$SUB_DOMAIN" "$caddyfile_path" || grep -q "https://\$SUB_DOMAIN" "$caddyfile_path"; then
         sed -i "s|https://\$SUB_DOMAIN|https://$SUB_DOMAIN|g" "$caddyfile_path"
         sed -i "s|https://$SUB_DOMAIN {|https://$SUB_DOMAIN {|g" "$caddyfile_path"
-        sed -i "s|http://remnawave-subscription-page:\$SUB_PORT|http://remnawave-subscription-page:$SUB_PORT|g" "$caddyfile_path"
-        sed -i "s|http://remnawave-subscription-page:[0-9]*|http://remnawave-subscription-page:$SUB_PORT|g" "$caddyfile_path"
+        sed -i "s|http://remnawave-subscription-page:\$SUB_PORT|http://$proxy_target:$SUB_PORT|g" "$caddyfile_path"
+        sed -i "s|http://remnawave-subscription-page:[0-9]*|http://$proxy_target:$SUB_PORT|g" "$caddyfile_path"
+        sed -i "s|http://127.0.0.1:[0-9]*|http://$proxy_target:$SUB_PORT|g" "$caddyfile_path"
     else
         local temp_file=$(mktemp)
-        awk -v sub_domain="$SUB_DOMAIN" -v sub_port="$SUB_PORT" '
+        awk -v sub_domain="$SUB_DOMAIN" -v sub_port="$SUB_PORT" -v proxy="$proxy_target" '
             /^:443 {/ {
                 print "https://" sub_domain " {"
-                print "    reverse_proxy * http://remnawave-subscription-page:" sub_port
+                print "    reverse_proxy * http://" proxy ":" sub_port
                 print "}"
                 print ""
             }
