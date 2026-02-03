@@ -63,11 +63,20 @@ https://$SUB_DOMAIN {
 }
 EOF
 
-        cp "/opt/remnasetup/data/docker/caddy-compose.yml" docker-compose.yml
+        cat > docker-compose.yml << 'COMPOSE'
+services:
+    caddy:
+        image: caddy:2.9
+        container_name: 'caddy'
+        restart: always
+        network_mode: host
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile
+            - caddy-ssl-data:/data
 
-        sed -i '/networks:/d' docker-compose.yml
-        sed -i '/- remnawave-network/d' docker-compose.yml
-        sed -i '/remnawave-network:/,/external: true/d' docker-compose.yml
+volumes:
+    caddy-ssl-data:
+COMPOSE
         
         docker compose up -d
     else
