@@ -86,7 +86,7 @@ cp "$REMWAVE_DIR/.env" "$TMP_DIR/"
 cp "$REMWAVE_DIR/docker-compose.yml" "$TMP_DIR/"
 
 info "$(get_string "backup_creating_archive")"
-7z a -t7z -m0=lzma2 -mx=9 -mfb=273 -md=64m -ms=on -p"$ARCHIVE_PASSWORD" "$BACKUP_DIR/$FINAL_ARCHIVE" "$TMP_DIR/*" >/dev/null 2>&1
+7z a -t7z -m0=lzma2 -mx=9 -mfb=273 -md=64m -ms=on -p"$ARCHIVE_PASSWORD" "$BACKUP_DIR/$FINAL_ARCHIVE" "$TMP_DIR" >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     error "$(get_string "backup_archive_error")"
     ls -l "$TMP_DIR"
