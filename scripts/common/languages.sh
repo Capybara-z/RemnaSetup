@@ -220,6 +220,8 @@ LANG_STRINGS["en_restore_removing_temp"]="Removing temporary files..."
 LANG_STRINGS["en_restore_starting_remnawave"]="Starting Remnawave containers..."
 LANG_STRINGS["en_restore_complete"]="Restore completed successfully!"
 LANG_STRINGS["en_restore_press_key"]="Press any key to return to menu..."
+LANG_STRINGS["en_restore_configs_not_found"]="Configuration files (.env or docker-compose.yml) not found in backup archive!"
+LANG_STRINGS["en_restore_db_backup_not_found"]="Database backup file not found in backup archive!"
 
 LANG_STRINGS["ru_restore_start"]="Начинаем восстановление Remnawave из резервной копии"
 LANG_STRINGS["ru_restore_select_source"]="Выберите источник восстановления (y - локальный, n - Telegram):"
@@ -260,6 +262,8 @@ LANG_STRINGS["ru_restore_removing_temp"]="Удаляем временные фа
 LANG_STRINGS["ru_restore_starting_remnawave"]="Запускаем контейнеры Remnawave..."
 LANG_STRINGS["ru_restore_complete"]="Восстановление завершено успешно!"
 LANG_STRINGS["ru_restore_press_key"]="Нажмите любую клавишу для возврата в меню..."
+LANG_STRINGS["ru_restore_configs_not_found"]="Конфигурационные файлы (.env или docker-compose.yml) не найдены в архиве резервной копии!"
+LANG_STRINGS["ru_restore_db_backup_not_found"]="Файл резервной копии базы данных не найден в архиве!"
 
 # Remnanode
 # Remnanode-install-bbr

@@ -221,8 +221,28 @@ if [ -d "$REMWAVE_DIR" ]; then
 fi
 
 info "$(get_string "restore_restoring_configs")"
-cp "$TMP_RESTORE_DIR/.env" "$REMWAVE_DIR/"
-cp "$TMP_RESTORE_DIR/docker-compose.yml" "$REMWAVE_DIR/"
+
+ENV_FILE=$(find "$TMP_RESTORE_DIR" -name ".env" -type f 2>/dev/null | head -n1)
+COMPOSE_FILE=$(find "$TMP_RESTORE_DIR" -name "docker-compose.yml" -type f 2>/dev/null | head -n1)
+DB_BACKUP_FILE=$(find "$TMP_RESTORE_DIR" -name "remnawave-db-backup-*.tar.gz" -type f 2>/dev/null | head -n1)
+
+if [ -z "$ENV_FILE" ] || [ -z "$COMPOSE_FILE" ]; then
+    error "$(get_string "restore_configs_not_found")"
+    rm -rf "$WORK_DIR"
+    read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
+fi
+
+if [ -z "$DB_BACKUP_FILE" ]; then
+    error "$(get_string "restore_db_backup_not_found")"
+    rm -rf "$WORK_DIR"
+    read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
+fi
+
+cp "$ENV_FILE" "$REMWAVE_DIR/"
+cp "$COMPOSE_FILE" "$REMWAVE_DIR/"
+
+DB_BACKUP_DIR=$(dirname "$DB_BACKUP_FILE")
+DB_BACKUP_NAME=$(basename "$DB_BACKUP_FILE")
 
 info "$(get_string "restore_starting_containers")"
 cd "$REMWAVE_DIR" && docker compose up -d
@@ -238,12 +258,11 @@ docker run --rm \
     sh -c "rm -rf /volume/*"
 
 info "$(get_string "restore_restoring_database")"
-DB_BACKUP_FILE=$(ls "$TMP_RESTORE_DIR"/remnawave-db-backup-*.tar.gz 2>/dev/null | head -n1)
 docker run --rm \
     -v ${DB_VOLUME}:/volume \
-    -v "$TMP_RESTORE_DIR":/backup \
+    -v "$DB_BACKUP_DIR":/backup \
     alpine \
-    tar xzf /backup/$(basename "$DB_BACKUP_FILE") -C /volume
+    tar xzf /backup/$DB_BACKUP_NAME -C /volume
 
 info "$(get_string "restore_removing_temp")"
 rm -rf "$WORK_DIR"
