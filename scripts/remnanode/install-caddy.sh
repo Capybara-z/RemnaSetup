@@ -25,7 +25,16 @@ check_caddy() {
     return 0
 }
 
+stop_nginx_if_running() {
+    if command -v nginx >/dev/null 2>&1; then
+        warn "$(get_string "install_full_node_nginx_detected_stopping")"
+        systemctl stop nginx 2>/dev/null || true
+        systemctl disable nginx 2>/dev/null || true
+    fi
+}
+
 install_caddy() {
+    stop_nginx_if_running
     info "$(get_string "install_caddy_node_installing")"
     apt-get update -y
     apt-get install -y debian-keyring debian-archive-keyring apt-transport-https

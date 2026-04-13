@@ -102,23 +102,25 @@ display_remnanode_menu() {
     print_header
     menu "$(get_string "remnanode_menu")"
     if [ "$LANGUAGE" = "en" ]; then
-        echo -e "${BLUE}1. Full installation (Remnanode + Caddy + BBR + WARP-NATIVE (by distillium))${RESET}"
+        echo -e "${BLUE}1. Full installation (Remnanode + Caddy/Nginx + BBR + WARP-NATIVE (by distillium))${RESET}"
         echo -e "${BLUE}2. Install Remnanode only${RESET}"
         echo -e "${BLUE}3. Install Caddy + self-steal only${RESET}"
-        echo -e "${BLUE}4. IPv6 Management${RESET}"
-        echo -e "${BLUE}5. Install BBR only${RESET}"
-        echo -e "${BLUE}6. Install WARP-NATIVE (by distillium)${RESET}"
-        echo -e "${BLUE}7. Update Remnanode${RESET}"
-        echo -e "${BLUE}8. Back${RESET}"
+        echo -e "${BLUE}4. Install Nginx + self-steal only${RESET}"
+        echo -e "${BLUE}5. IPv6 Management${RESET}"
+        echo -e "${BLUE}6. Install BBR only${RESET}"
+        echo -e "${BLUE}7. Install WARP-NATIVE (by distillium)${RESET}"
+        echo -e "${BLUE}8. Update Remnanode${RESET}"
+        echo -e "${BLUE}9. Back${RESET}"
     else
-        echo -e "${BLUE}1. Полная установка (Remnanode + Caddy + BBR + WARP-NATIVE (by distillium))${RESET}"
+        echo -e "${BLUE}1. Полная установка (Remnanode + Caddy/Nginx + BBR + WARP-NATIVE (by distillium))${RESET}"
         echo -e "${BLUE}2. Только Remnanode${RESET}"
         echo -e "${BLUE}3. Только Caddy + self-steal${RESET}"
-        echo -e "${BLUE}4. Управление IPv6${RESET}"
-        echo -e "${BLUE}5. Только BBR${RESET}"
-        echo -e "${BLUE}6. Установить WARP-NATIVE (by distillium)${RESET}"
-        echo -e "${BLUE}7. Обновить Remnanode${RESET}"
-        echo -e "${BLUE}8. Назад${RESET}"
+        echo -e "${BLUE}4. Только Nginx + self-steal${RESET}"
+        echo -e "${BLUE}5. Управление IPv6${RESET}"
+        echo -e "${BLUE}6. Только BBR${RESET}"
+        echo -e "${BLUE}7. Установить WARP-NATIVE (by distillium)${RESET}"
+        echo -e "${BLUE}8. Обновить Remnanode${RESET}"
+        echo -e "${BLUE}9. Назад${RESET}"
     fi
     echo
     read -p "$(echo -e "${BOLD_CYAN}$(get_string "select_option"):${RESET}") " REMNANODE_OPTION
@@ -180,8 +182,60 @@ run_script() {
     fi
 }
 
+handle_command() {
+    local cmd="$1"
+    case "$cmd" in
+        install-node)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/install-full.sh"
+            exit 0
+            ;;
+        install-node-only)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/install-node.sh"
+            exit 0
+            ;;
+        install-caddy-node)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/install-caddy.sh"
+            exit 0
+            ;;
+        install-nginx-node)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/install-nginx.sh"
+            exit 0
+            ;;
+        install-bbr)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/install-bbr.sh"
+            exit 0
+            ;;
+        install-warp)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/install-warp.sh"
+            exit 0
+            ;;
+        update-node)
+            run_script "${SCRIPT_DIR}/scripts/remnanode/update.sh"
+            exit 0
+            ;;
+        *)
+            error "$(get_string "invalid_choice"): $cmd"
+            echo ""
+            echo "Available commands:"
+            echo "  install-node         - Full node installation"
+            echo "  install-node-only    - Install Remnanode only"
+            echo "  install-caddy-node   - Install Caddy only"
+            echo "  install-nginx-node   - Install Nginx only"
+            echo "  install-bbr          - Install BBR only"
+            echo "  install-warp         - Install WARP only"
+            echo "  update-node          - Update Remnanode"
+            exit 1
+            ;;
+    esac
+}
+
 main() {
     select_language
+
+    if [[ -n "$1" ]]; then
+        handle_command "$1"
+    fi
+
     while true; do
         display_main_menu
         case $MAIN_OPTION in
@@ -208,11 +262,12 @@ main() {
                         1) run_script "${SCRIPT_DIR}/scripts/remnanode/install-full.sh" ;;
                         2) run_script "${SCRIPT_DIR}/scripts/remnanode/install-node.sh" ;;
                         3) run_script "${SCRIPT_DIR}/scripts/remnanode/install-caddy.sh" ;;
-                        4) run_script "${SCRIPT_DIR}/scripts/remnanode/install-ipv6.sh" ;;
-                        5) run_script "${SCRIPT_DIR}/scripts/remnanode/install-bbr.sh" ;;
-                        6) run_script "${SCRIPT_DIR}/scripts/remnanode/install-warp.sh" ;;
-                        7) run_script "${SCRIPT_DIR}/scripts/remnanode/update.sh" ;;
-                        8) break ;;
+                        4) run_script "${SCRIPT_DIR}/scripts/remnanode/install-nginx.sh" ;;
+                        5) run_script "${SCRIPT_DIR}/scripts/remnanode/install-ipv6.sh" ;;
+                        6) run_script "${SCRIPT_DIR}/scripts/remnanode/install-bbr.sh" ;;
+                        7) run_script "${SCRIPT_DIR}/scripts/remnanode/install-warp.sh" ;;
+                        8) run_script "${SCRIPT_DIR}/scripts/remnanode/update.sh" ;;
+                        9) break ;;
                         *) warn "$(get_string "invalid_choice")" ;;
                     esac
                 done
@@ -241,4 +296,4 @@ main() {
     done
 }
 
-main 
+main "$@"

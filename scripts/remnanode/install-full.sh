@@ -30,56 +30,101 @@ check_components() {
 
     if [ -f "/opt/remnanode/docker-compose.yml" ]; then
         info "$(get_string "install_full_node_remnanode_installed")"
-        while true; do
-            question "$(get_string "install_full_node_update_remnanode")"
-            UPDATE_NODE="$REPLY"
-            if [[ "$UPDATE_NODE" == "y" || "$UPDATE_NODE" == "Y" ]]; then
-                UPDATE_REMNANODE=true
-                break
-            elif [[ "$UPDATE_NODE" == "n" || "$UPDATE_NODE" == "N" ]]; then
-                SKIP_REMNANODE=true
-                break
-            else
-                warn "$(get_string "install_full_node_please_enter_yn")"
-            fi
-        done
+        if [[ "$SKIP_REMNANODE" == "true" ]]; then
+            info "SKIP_REMNANODE=true, skipping..."
+        elif [[ "$UPDATE_REMNANODE" == "true" ]]; then
+            info "UPDATE_REMNANODE=true, will update..."
+        else
+            while true; do
+                question "$(get_string "install_full_node_update_remnanode")"
+                UPDATE_NODE="$REPLY"
+                if [[ "$UPDATE_NODE" == "y" || "$UPDATE_NODE" == "Y" ]]; then
+                    UPDATE_REMNANODE=true
+                    break
+                elif [[ "$UPDATE_NODE" == "n" || "$UPDATE_NODE" == "N" ]]; then
+                    SKIP_REMNANODE=true
+                    break
+                else
+                    warn "$(get_string "install_full_node_please_enter_yn")"
+                fi
+            done
+        fi
     fi
 
     if command -v caddy >/dev/null 2>&1; then
         info "$(get_string "install_full_node_caddy_installed")"
-        while true; do
-            question "$(get_string "install_full_node_update_caddy")"
-            UPDATE_CADDY="$REPLY"
-            if [[ "$UPDATE_CADDY" == "y" || "$UPDATE_CADDY" == "Y" ]]; then
-                UPDATE_CADDY=true
-                break
-            elif [[ "$UPDATE_CADDY" == "n" || "$UPDATE_CADDY" == "N" ]]; then
-                SKIP_CADDY=true
-                break
-            else
-                warn "$(get_string "install_full_node_please_enter_yn")"
-            fi
-        done
+        DETECTED_WEBSERVER="caddy"
+        if [[ "$SKIP_WEBSERVER" == "true" ]]; then
+            info "SKIP_WEBSERVER=true, skipping..."
+        elif [[ "$UPDATE_CADDY" == "true" ]]; then
+            info "UPDATE_CADDY=true, will update..."
+        else
+            while true; do
+                question "$(get_string "install_full_node_update_caddy")"
+                UPDATE_CADDY="$REPLY"
+                if [[ "$UPDATE_CADDY" == "y" || "$UPDATE_CADDY" == "Y" ]]; then
+                    UPDATE_CADDY=true
+                    break
+                elif [[ "$UPDATE_CADDY" == "n" || "$UPDATE_CADDY" == "N" ]]; then
+                    SKIP_CADDY=true
+                    SKIP_WEBSERVER=true
+                    break
+                else
+                    warn "$(get_string "install_full_node_please_enter_yn")"
+                fi
+            done
+        fi
+    elif command -v nginx >/dev/null 2>&1; then
+        info "$(get_string "install_full_node_nginx_installed")"
+        DETECTED_WEBSERVER="nginx"
+        if [[ "$SKIP_WEBSERVER" == "true" ]]; then
+            info "SKIP_WEBSERVER=true, skipping..."
+        elif [[ "$UPDATE_NGINX" == "true" ]]; then
+            info "UPDATE_NGINX=true, will update..."
+        else
+            while true; do
+                question "$(get_string "install_full_node_update_nginx")"
+                UPDATE_NGINX="$REPLY"
+                if [[ "$UPDATE_NGINX" == "y" || "$UPDATE_NGINX" == "Y" ]]; then
+                    UPDATE_NGINX=true
+                    break
+                elif [[ "$UPDATE_NGINX" == "n" || "$UPDATE_NGINX" == "N" ]]; then
+                    SKIP_NGINX=true
+                    SKIP_WEBSERVER=true
+                    break
+                else
+                    warn "$(get_string "install_full_node_please_enter_yn")"
+                fi
+            done
+        fi
     fi
 
     if command -v wgcf >/dev/null 2>&1 && [ -f "/etc/wireguard/warp.conf" ]; then
         info "$(get_string "warp_native_already_installed")"
-        while true; do
-            question "$(get_string "warp_native_reconfigure")"
-            RECONFIGURE="$REPLY"
-            if [[ "$RECONFIGURE" == "y" || "$RECONFIGURE" == "Y" ]]; then
-                SKIP_WARP=false
-                break
-            elif [[ "$RECONFIGURE" == "n" || "$RECONFIGURE" == "N" ]]; then
-                SKIP_WARP=true
-                info "$(get_string "warp_native_skip_installation")"
-                break
-            else
-                warn "$(get_string "warp_native_please_enter_yn")"
-            fi
-        done
+        if [[ "$SKIP_WARP" == "true" ]]; then
+            info "SKIP_WARP=true, skipping..."
+        elif [[ "$SKIP_WARP" == "false" ]]; then
+            :
+        else
+            while true; do
+                question "$(get_string "warp_native_reconfigure")"
+                RECONFIGURE="$REPLY"
+                if [[ "$RECONFIGURE" == "y" || "$RECONFIGURE" == "Y" ]]; then
+                    SKIP_WARP=false
+                    break
+                elif [[ "$RECONFIGURE" == "n" || "$RECONFIGURE" == "N" ]]; then
+                    SKIP_WARP=true
+                    info "$(get_string "warp_native_skip_installation")"
+                    break
+                else
+                    warn "$(get_string "warp_native_please_enter_yn")"
+                fi
+            done
+        fi
     else
-        SKIP_WARP=false
+        if [[ -z "$SKIP_WARP" ]]; then
+            SKIP_WARP=false
+        fi
     fi
 
     if sysctl net.ipv4.tcp_congestion_control | grep -q bbr; then
@@ -89,42 +134,47 @@ check_components() {
 }
 
 request_data() {
-    if [[ "$SKIP_CADDY" != "true" ]]; then
-        while true; do
-            question "$(get_string "install_full_node_enter_domain")"
-            DOMAIN="$REPLY"
-            if [[ "$DOMAIN" == "n" || "$DOMAIN" == "N" ]]; then
-                while true; do
-                    question "$(get_string "install_full_node_confirm_skip_caddy")"
-                    CONFIRM="$REPLY"
-                    if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
-                        SKIP_CADDY=true
-                        break
-                    elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
-                        break
-                    else
-                        warn "$(get_string "install_full_node_please_enter_yn")"
-                    fi
-                done
-                if [[ "$SKIP_CADDY" == "true" ]]; then
+    if [[ "$SKIP_WEBSERVER" != "true" ]]; then
+        if [[ -n "$WEBSERVER" ]]; then
+            info "WEBSERVER=$WEBSERVER"
+        elif [[ -z "$DETECTED_WEBSERVER" ]]; then
+            echo ""
+            info "$(get_string "install_full_node_webserver_choice")"
+            echo -e "${BLUE}1. $(get_string "install_full_node_webserver_caddy")${RESET}"
+            echo -e "${BLUE}2. $(get_string "install_full_node_webserver_nginx")${RESET}"
+            echo ""
+            while true; do
+                question "$(get_string "install_full_node_webserver_choose")"
+                WEBSERVER_CHOICE="$REPLY"
+                if [[ "$WEBSERVER_CHOICE" == "1" ]]; then
+                    WEBSERVER="caddy"
+                    break
+                elif [[ "$WEBSERVER_CHOICE" == "2" ]]; then
+                    WEBSERVER="nginx"
                     break
                 fi
-            elif [[ -n "$DOMAIN" ]]; then
-                break
-            fi
-            warn "$(get_string "install_full_node_domain_empty")"
-        done
+                warn "$(get_string "install_full_node_webserver_invalid")"
+            done
+        elif [[ "$UPDATE_CADDY" == "true" ]]; then
+            WEBSERVER="caddy"
+        elif [[ "$UPDATE_NGINX" == "true" ]]; then
+            WEBSERVER="nginx"
+        fi
+    fi
 
-        if [[ "$SKIP_CADDY" != "true" ]]; then
+    if [[ "$SKIP_WEBSERVER" != "true" && "$WEBSERVER" == "caddy" ]]; then
+        if [[ -n "$DOMAIN" ]]; then
+            info "DOMAIN=$DOMAIN"
+        else
             while true; do
-                question "$(get_string "install_full_node_enter_port")"
-                MONITOR_PORT="$REPLY"
-                if [[ "$MONITOR_PORT" == "n" || "$MONITOR_PORT" == "N" ]]; then
+                question "$(get_string "install_full_node_enter_domain")"
+                DOMAIN="$REPLY"
+                if [[ "$DOMAIN" == "n" || "$DOMAIN" == "N" ]]; then
                     while true; do
                         question "$(get_string "install_full_node_confirm_skip_caddy")"
                         CONFIRM="$REPLY"
                         if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
-                            SKIP_CADDY=true
+                            SKIP_WEBSERVER=true
                             break
                         elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
                             break
@@ -132,52 +182,122 @@ request_data() {
                             warn "$(get_string "install_full_node_please_enter_yn")"
                         fi
                     done
-                    if [[ "$SKIP_CADDY" == "true" ]]; then
+                    if [[ "$SKIP_WEBSERVER" == "true" ]]; then
                         break
                     fi
-                fi
-                MONITOR_PORT=${MONITOR_PORT:-8443}
-                if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
+                elif [[ -n "$DOMAIN" ]]; then
                     break
                 fi
-                warn "$(get_string "install_full_node_port_must_be_number")"
+                warn "$(get_string "install_full_node_domain_empty")"
             done
+        fi
+
+        if [[ "$SKIP_WEBSERVER" != "true" ]]; then
+            if [[ -n "$MONITOR_PORT" ]]; then
+                info "MONITOR_PORT=$MONITOR_PORT"
+            else
+                while true; do
+                    question "$(get_string "install_full_node_enter_port")"
+                    MONITOR_PORT="$REPLY"
+                    if [[ "$MONITOR_PORT" == "n" || "$MONITOR_PORT" == "N" ]]; then
+                        while true; do
+                            question "$(get_string "install_full_node_confirm_skip_caddy")"
+                            CONFIRM="$REPLY"
+                            if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
+                                SKIP_WEBSERVER=true
+                                break
+                            elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
+                                break
+                            else
+                                warn "$(get_string "install_full_node_please_enter_yn")"
+                            fi
+                        done
+                        if [[ "$SKIP_WEBSERVER" == "true" ]]; then
+                            break
+                        fi
+                    fi
+                    MONITOR_PORT=${MONITOR_PORT:-8443}
+                    if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_full_node_port_must_be_number")"
+                done
+            fi
+        fi
+    elif [[ "$SKIP_WEBSERVER" != "true" && "$WEBSERVER" == "nginx" ]]; then
+        if [[ -n "$DOMAIN" ]]; then
+            info "DOMAIN=$DOMAIN"
+        else
+            while true; do
+                question "$(get_string "install_full_node_enter_domain")"
+                DOMAIN="$REPLY"
+                if [[ "$DOMAIN" == "n" || "$DOMAIN" == "N" ]]; then
+                    SKIP_WEBSERVER=true
+                    break
+                elif [[ -n "$DOMAIN" ]]; then
+                    break
+                fi
+                warn "$(get_string "install_full_node_domain_empty")"
+            done
+        fi
+
+        if [[ "$SKIP_WEBSERVER" != "true" ]]; then
+            if [[ -n "$MONITOR_PORT" ]]; then
+                info "MONITOR_PORT=$MONITOR_PORT"
+            else
+                while true; do
+                    question "$(get_string "install_full_node_enter_port")"
+                    MONITOR_PORT="$REPLY"
+                    MONITOR_PORT=${MONITOR_PORT:-8443}
+                    if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_full_node_port_must_be_number")"
+                done
+            fi
+
+            if [[ -n "$USE_PROXY_PROTOCOL" ]]; then
+                info "USE_PROXY_PROTOCOL=$USE_PROXY_PROTOCOL"
+            else
+                while true; do
+                    question "$(get_string "install_nginx_node_use_proxy_protocol")"
+                    USE_PROXY_PROTOCOL="$REPLY"
+                    if [[ "$USE_PROXY_PROTOCOL" == "y" || "$USE_PROXY_PROTOCOL" == "Y" || "$USE_PROXY_PROTOCOL" == "n" || "$USE_PROXY_PROTOCOL" == "N" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_full_node_please_enter_yn")"
+                done
+            fi
+
+            if [[ -n "$CERT_METHOD" ]]; then
+                info "CERT_METHOD=$CERT_METHOD"
+            else
+                echo ""
+                info "$(get_string "install_nginx_node_cert_method_prompt")"
+                echo -e "${BLUE}1. Cloudflare DNS-01 (wildcard)${RESET}"
+                echo -e "${BLUE}2. HTTP-01 / standalone${RESET}"
+                echo -e "${BLUE}3. Gcore DNS-01 (wildcard)${RESET}"
+                echo ""
+                while true; do
+                    question "$(get_string "install_nginx_node_cert_method_choose")"
+                    CERT_METHOD="$REPLY"
+                    if [[ "$CERT_METHOD" =~ ^[1-3]$ ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_nginx_node_cert_method_invalid")"
+                done
+            fi
         fi
     fi
 
     if [[ "$SKIP_REMNANODE" != "true" ]]; then
-        while true; do
-            question "$(get_string "install_full_node_enter_app_port")"
-            NODE_PORT="$REPLY"
-            if [[ "$NODE_PORT" == "n" || "$NODE_PORT" == "N" ]]; then
-                while true; do
-                    question "$(get_string "install_full_node_confirm_skip_remnanode")"
-                    CONFIRM="$REPLY"
-                    if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
-                        SKIP_REMNANODE=true
-                        break
-                    elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
-                        break
-                    else
-                        warn "$(get_string "install_full_node_please_enter_yn")"
-                    fi
-                done
-                if [[ "$SKIP_REMNANODE" == "true" ]]; then
-                    break
-                fi
-            fi
-            NODE_PORT=${NODE_PORT:-3001}
-            if [[ "$NODE_PORT" =~ ^[0-9]+$ ]]; then
-                break
-            fi
-            warn "$(get_string "install_full_node_port_must_be_number")"
-        done
-
-        if [[ "$SKIP_REMNANODE" != "true" ]]; then
+        if [[ -n "$NODE_PORT" ]]; then
+            info "NODE_PORT=$NODE_PORT"
+        else
             while true; do
-                question "$(get_string "install_full_node_enter_ssl_cert")"
-                SECRET_KEY="$REPLY"
-                if [[ "$SECRET_KEY" == "n" || "$SECRET_KEY" == "N" ]]; then
+                question "$(get_string "install_full_node_enter_app_port")"
+                NODE_PORT="$REPLY"
+                if [[ "$NODE_PORT" == "n" || "$NODE_PORT" == "N" ]]; then
                     while true; do
                         question "$(get_string "install_full_node_confirm_skip_remnanode")"
                         CONFIRM="$REPLY"
@@ -193,56 +313,104 @@ request_data() {
                     if [[ "$SKIP_REMNANODE" == "true" ]]; then
                         break
                     fi
-                elif [[ -n "$SECRET_KEY" ]]; then
+                fi
+                NODE_PORT=${NODE_PORT:-3001}
+                if [[ "$NODE_PORT" =~ ^[0-9]+$ ]]; then
                     break
                 fi
-                warn "$(get_string "install_full_node_ssl_cert_empty")"
+                warn "$(get_string "install_full_node_port_must_be_number")"
             done
+        fi
+
+        if [[ "$SKIP_REMNANODE" != "true" ]]; then
+            if [[ -n "$SECRET_KEY" ]]; then
+                info "SECRET_KEY=***"
+            else
+                while true; do
+                    question "$(get_string "install_full_node_enter_ssl_cert")"
+                    SECRET_KEY="$REPLY"
+                    if [[ "$SECRET_KEY" == "n" || "$SECRET_KEY" == "N" ]]; then
+                        while true; do
+                            question "$(get_string "install_full_node_confirm_skip_remnanode")"
+                            CONFIRM="$REPLY"
+                            if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
+                                SKIP_REMNANODE=true
+                                break
+                            elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
+                                break
+                            else
+                                warn "$(get_string "install_full_node_please_enter_yn")"
+                            fi
+                        done
+                        if [[ "$SKIP_REMNANODE" == "true" ]]; then
+                            break
+                        fi
+                    elif [[ -n "$SECRET_KEY" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_full_node_ssl_cert_empty")"
+                done
+            fi
         fi
     fi
 
     if [[ "$SKIP_WARP" != "true" ]]; then
-        while true; do
-            question "$(get_string "install_full_node_install_warp_native")"
-            INSTALL_WARP="$REPLY"
-            if [[ "$INSTALL_WARP" == "n" || "$INSTALL_WARP" == "N" ]]; then
-                while true; do
-                    question "$(get_string "install_full_node_confirm_skip_warp")"
-                    CONFIRM="$REPLY"
-                    if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
-                        SKIP_WARP=true
+        if [[ "$INSTALL_WARP" == "y" || "$INSTALL_WARP" == "Y" ]]; then
+            info "INSTALL_WARP=$INSTALL_WARP"
+        elif [[ "$INSTALL_WARP" == "n" || "$INSTALL_WARP" == "N" ]]; then
+            SKIP_WARP=true
+            info "INSTALL_WARP=$INSTALL_WARP, skipping..."
+        else
+            while true; do
+                question "$(get_string "install_full_node_install_warp_native")"
+                INSTALL_WARP="$REPLY"
+                if [[ "$INSTALL_WARP" == "n" || "$INSTALL_WARP" == "N" ]]; then
+                    while true; do
+                        question "$(get_string "install_full_node_confirm_skip_warp")"
+                        CONFIRM="$REPLY"
+                        if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
+                            SKIP_WARP=true
+                            break
+                        elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
+                            break
+                        else
+                            warn "$(get_string "install_full_node_please_enter_yn")"
+                        fi
+                    done
+                    if [[ "$SKIP_WARP" == "true" ]]; then
                         break
-                    elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
-                        break
-                    else
-                        warn "$(get_string "install_full_node_please_enter_yn")"
                     fi
-                done
-                if [[ "$SKIP_WARP" == "true" ]]; then
+                elif [[ "$INSTALL_WARP" == "y" || "$INSTALL_WARP" == "Y" ]]; then
                     break
+                else
+                    warn "$(get_string "install_full_node_please_enter_yn")"
                 fi
-            elif [[ "$INSTALL_WARP" == "y" || "$INSTALL_WARP" == "Y" ]]; then
-                break
-            else
-                warn "$(get_string "install_full_node_please_enter_yn")"
-            fi
-        done
+            done
+        fi
     fi
 
     if [[ "$SKIP_BBR" != "true" ]]; then
-        while true; do
-            question "$(get_string "install_full_node_need_bbr")"
-            BBR_ANSWER="$REPLY"
-            if [[ "$BBR_ANSWER" == "n" || "$BBR_ANSWER" == "N" ]]; then
-                SKIP_BBR=true
-                break
-            elif [[ "$BBR_ANSWER" == "y" || "$BBR_ANSWER" == "Y" ]]; then
-                SKIP_BBR=false
-                break
-            else
-                warn "$(get_string "install_full_node_please_enter_yn")"
-            fi
-        done
+        if [[ "$BBR_ANSWER" == "y" || "$BBR_ANSWER" == "Y" ]]; then
+            SKIP_BBR=false
+            info "BBR_ANSWER=$BBR_ANSWER"
+        elif [[ "$BBR_ANSWER" == "n" || "$BBR_ANSWER" == "N" ]]; then
+            SKIP_BBR=true
+            info "BBR_ANSWER=$BBR_ANSWER, skipping..."
+        else
+            while true; do
+                question "$(get_string "install_full_node_need_bbr")"
+                BBR_ANSWER="$REPLY"
+                if [[ "$BBR_ANSWER" == "n" || "$BBR_ANSWER" == "N" ]]; then
+                    SKIP_BBR=true
+                    break
+                elif [[ "$BBR_ANSWER" == "y" || "$BBR_ANSWER" == "Y" ]]; then
+                    SKIP_BBR=false
+                    break
+                else
+                    warn "$(get_string "install_full_node_please_enter_yn")"
+                fi
+            done
+        fi
     fi
 }
 
@@ -587,8 +755,210 @@ install_caddy() {
     cp "/opt/remnasetup/data/caddy/caddyfile-node" /etc/caddy/Caddyfile
     sed -i "s/\$DOMAIN/$DOMAIN/g" /etc/caddy/Caddyfile
     sed -i "s/\$MONITOR_PORT/$MONITOR_PORT/g" /etc/caddy/Caddyfile
+
+    if command -v nginx >/dev/null 2>&1; then
+        info "$(get_string "install_full_node_nginx_detected_stopping")"
+        systemctl stop nginx 2>/dev/null || true
+        systemctl disable nginx 2>/dev/null || true
+    fi
+
     systemctl restart caddy
     success "$(get_string "install_full_node_caddy_installed_success")"
+}
+
+install_nginx_selfsteal() {
+    info "$(get_string "install_full_node_installing_nginx")"
+
+    if command -v caddy >/dev/null 2>&1; then
+        warn "$(get_string "install_nginx_node_caddy_detected")"
+        systemctl stop caddy 2>/dev/null || true
+        systemctl disable caddy 2>/dev/null || true
+        success "$(get_string "install_nginx_node_caddy_stopped")"
+    fi
+
+    apt-get install -y nginx certbot
+
+    info "$(get_string "install_full_node_setup_site")"
+
+    if [ -d "/var/www/site" ]; then
+        rm -rf /var/www/site/*
+    else
+        mkdir -p /var/www/site
+    fi
+    mkdir -p /var/www/html
+
+    RANDOM_META_ID=$(openssl rand -hex 16)
+    RANDOM_CLASS=$(openssl rand -hex 8)
+    RANDOM_COMMENT=$(openssl rand -hex 12)
+
+    META_NAMES=("render-id" "view-id" "page-id" "config-id")
+    RANDOM_META_NAME=${META_NAMES[$RANDOM % ${#META_NAMES[@]}]}
+
+    cp -r "/opt/remnasetup/data/site/"* /var/www/site/
+
+    sed -i "/<meta name=\"viewport\"/a \    <meta name=\"$RANDOM_META_NAME\" content=\"$RANDOM_META_ID\">\n    <!-- $RANDOM_COMMENT -->" /var/www/site/index.html
+    sed -i "s/<body/<body class=\"$RANDOM_CLASS\"/" /var/www/site/index.html
+
+    sed -i "1i /* $RANDOM_COMMENT */" /var/www/site/assets/style.css
+    sed -i "1i // $RANDOM_COMMENT" /var/www/site/assets/main.js
+
+    local base_domain
+    base_domain=$(echo "$DOMAIN" | awk -F. '{print $(NF-1)"."$NF}')
+    local wildcard_domain="*.$base_domain"
+
+    case $CERT_METHOD in
+        1)
+            while true; do
+                question "$(get_string "install_nginx_node_enter_cf_token")"
+                CF_API_KEY="$REPLY"
+                if [[ -n "$CF_API_KEY" ]]; then break; fi
+                warn "$(get_string "install_nginx_node_token_empty")"
+            done
+            while true; do
+                question "$(get_string "install_nginx_node_enter_cf_email")"
+                CF_EMAIL="$REPLY"
+                if [[ -n "$CF_EMAIL" ]]; then break; fi
+                warn "$(get_string "install_nginx_node_email_empty")"
+            done
+
+            apt-get install -y python3-certbot-dns-cloudflare
+
+            mkdir -p ~/.secrets/certbot
+            if [[ $CF_API_KEY =~ [A-Z] ]]; then
+                cat > ~/.secrets/certbot/cloudflare.ini <<EOL
+dns_cloudflare_api_token = $CF_API_KEY
+EOL
+            else
+                cat > ~/.secrets/certbot/cloudflare.ini <<EOL
+dns_cloudflare_email = $CF_EMAIL
+dns_cloudflare_api_key = $CF_API_KEY
+EOL
+            fi
+            chmod 600 ~/.secrets/certbot/cloudflare.ini
+
+            certbot certonly \
+                --dns-cloudflare \
+                --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
+                --dns-cloudflare-propagation-seconds 60 \
+                -d "$base_domain" \
+                -d "$wildcard_domain" \
+                --email "$CF_EMAIL" \
+                --agree-tos \
+                --non-interactive \
+                --key-type ecdsa \
+                --elliptic-curve secp384r1 || {
+                error "$(get_string "install_nginx_node_cert_failed")"
+                exit 1
+            }
+            CERT_DOMAIN="$base_domain"
+            ;;
+        2)
+            while true; do
+                question "$(get_string "install_nginx_node_enter_email")"
+                LE_EMAIL="$REPLY"
+                if [[ -n "$LE_EMAIL" ]]; then break; fi
+                warn "$(get_string "install_nginx_node_email_empty")"
+            done
+
+            systemctl stop nginx 2>/dev/null || true
+
+            certbot certonly \
+                --standalone \
+                -d "$DOMAIN" \
+                --email "$LE_EMAIL" \
+                --agree-tos \
+                --non-interactive \
+                --key-type ecdsa \
+                --elliptic-curve secp384r1 || {
+                error "$(get_string "install_nginx_node_cert_failed")"
+                exit 1
+            }
+            CERT_DOMAIN="$DOMAIN"
+            ;;
+        3)
+            while true; do
+                question "$(get_string "install_nginx_node_enter_gcore_token")"
+                GCORE_API_KEY="$REPLY"
+                if [[ -n "$GCORE_API_KEY" ]]; then break; fi
+                warn "$(get_string "install_nginx_node_token_empty")"
+            done
+            while true; do
+                question "$(get_string "install_nginx_node_enter_email")"
+                LE_EMAIL="$REPLY"
+                if [[ -n "$LE_EMAIL" ]]; then break; fi
+                warn "$(get_string "install_nginx_node_email_empty")"
+            done
+
+            if ! certbot plugins 2>/dev/null | grep -q "dns-gcore"; then
+                if python3 -m pip install --help 2>&1 | grep -q "break-system-packages"; then
+                    python3 -m pip install --break-system-packages certbot-dns-gcore >/dev/null 2>&1
+                else
+                    python3 -m pip install certbot-dns-gcore >/dev/null 2>&1
+                fi
+            fi
+
+            mkdir -p ~/.secrets/certbot
+            cat > ~/.secrets/certbot/gcore.ini <<EOL
+dns_gcore_apitoken = $GCORE_API_KEY
+EOL
+            chmod 600 ~/.secrets/certbot/gcore.ini
+
+            certbot certonly \
+                --authenticator dns-gcore \
+                --dns-gcore-credentials ~/.secrets/certbot/gcore.ini \
+                --dns-gcore-propagation-seconds 80 \
+                -d "$base_domain" \
+                -d "$wildcard_domain" \
+                --email "$LE_EMAIL" \
+                --agree-tos \
+                --non-interactive \
+                --key-type ecdsa \
+                --elliptic-curve secp384r1 || {
+                error "$(get_string "install_nginx_node_cert_failed")"
+                exit 1
+            }
+            CERT_DOMAIN="$base_domain"
+            ;;
+    esac
+
+    success "$(get_string "install_nginx_node_cert_obtained")"
+
+    if ! crontab -u root -l 2>/dev/null | grep -q "/usr/bin/certbot renew"; then
+        local cron_command
+        if [ "$CERT_METHOD" == "2" ]; then
+            cron_command="systemctl stop nginx && /usr/bin/certbot renew --quiet && systemctl start nginx"
+        else
+            cron_command="/usr/bin/certbot renew --quiet && systemctl reload nginx"
+        fi
+        (crontab -u root -l 2>/dev/null; echo "0 5 * * 0 $cron_command") | crontab -u root -
+    fi
+
+    cp "/opt/remnasetup/data/nginx/nginx-node.conf" /etc/nginx/nginx.conf
+
+    rm -f /etc/nginx/conf.d/default.conf
+    rm -f /etc/nginx/sites-enabled/default
+
+    if [[ "$USE_PROXY_PROTOCOL" == "y" || "$USE_PROXY_PROTOCOL" == "Y" ]]; then
+        cp "/opt/remnasetup/data/nginx/selfsteal-proxy-protocol.conf" /etc/nginx/conf.d/selfsteal.conf
+    else
+        cp "/opt/remnasetup/data/nginx/selfsteal.conf" /etc/nginx/conf.d/selfsteal.conf
+    fi
+
+    sed -i "s|\$DOMAIN|$DOMAIN|g" /etc/nginx/conf.d/selfsteal.conf
+    sed -i "s|\$MONITOR_PORT|$MONITOR_PORT|g" /etc/nginx/conf.d/selfsteal.conf
+
+    if [[ -n "$CERT_DOMAIN" && "$CERT_DOMAIN" != "$DOMAIN" ]]; then
+        sed -i "s|/etc/letsencrypt/live/$DOMAIN|/etc/letsencrypt/live/$CERT_DOMAIN|g" /etc/nginx/conf.d/selfsteal.conf
+    fi
+
+    nginx -t || {
+        error "$(get_string "install_nginx_node_config_test_failed")"
+        exit 1
+    }
+
+    systemctl restart nginx
+    systemctl enable nginx
+    success "$(get_string "install_full_node_nginx_installed_success")"
 }
 
 install_remnanode() {
@@ -650,12 +1020,20 @@ main() {
         install_bbr
     fi
     
-    if [[ "$SKIP_CADDY" != "true" ]]; then
-        if [[ "$UPDATE_CADDY" == "true" ]]; then
-            systemctl stop caddy
-            rm -f /etc/caddy/Caddyfile
+    if [[ "$SKIP_WEBSERVER" != "true" ]]; then
+        if [[ "$WEBSERVER" == "caddy" ]]; then
+            if [[ "$UPDATE_CADDY" == "true" ]]; then
+                systemctl stop caddy
+                rm -f /etc/caddy/Caddyfile
+            fi
+            install_caddy
+        elif [[ "$WEBSERVER" == "nginx" ]]; then
+            if [[ "$UPDATE_NGINX" == "true" ]]; then
+                systemctl stop nginx 2>/dev/null || true
+                rm -f /etc/nginx/conf.d/selfsteal.conf
+            fi
+            install_nginx_selfsteal
         fi
-        install_caddy
     fi
 
     setup_logs_and_logrotate
@@ -671,6 +1049,19 @@ main() {
     fi
     
     success "$(get_string "install_full_node_complete")"
+
+    if [[ "$WEBSERVER" == "nginx" && "$SKIP_WEBSERVER" != "true" ]]; then
+        echo ""
+        if [[ "$USE_PROXY_PROTOCOL" == "y" || "$USE_PROXY_PROTOCOL" == "Y" ]]; then
+            echo -e "${BOLD_CYAN}Xray Reality config:${RESET}"
+            echo -e "${BLUE}  \"target\": \"127.0.0.1:$MONITOR_PORT\",${RESET}"
+            echo -e "${BLUE}  \"xver\": 1${RESET}"
+        else
+            echo -e "${BOLD_CYAN}Xray Reality config:${RESET}"
+            echo -e "${BLUE}  \"target\": \"127.0.0.1:$MONITOR_PORT\",${RESET}"
+            echo -e "${BLUE}  \"xver\": 0${RESET}"
+        fi
+    fi
 
     if [[ "$SKIP_WARP" != "true" ]]; then
         echo ""
