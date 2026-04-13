@@ -22,6 +22,12 @@ Script for installing and managing **Remnawave** and **Remnanode** infrastructur
 bash <(curl -fsSL raw.githubusercontent.com/Capybara-z/RemnaSetup/refs/heads/main/install.sh)
 ```
 
+or
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Capybara-z/RemnaSetup/refs/heads/main/install.sh -o install.sh && chmod +x install.sh && sudo bash ./install.sh
+```
+
 ---
 
 ## Features
