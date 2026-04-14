@@ -56,6 +56,11 @@ check_components() {
         DETECTED_WEBSERVER="caddy"
         if [[ "$SKIP_WEBSERVER" == "true" ]]; then
             info "SKIP_WEBSERVER=true, skipping..."
+        elif [[ -n "$WEBSERVER" ]]; then
+            if [[ "$WEBSERVER" == "caddy" ]]; then
+                UPDATE_CADDY=true
+                info "WEBSERVER=caddy, will update..."
+            fi
         elif [[ "$UPDATE_CADDY" == "true" ]]; then
             info "UPDATE_CADDY=true, will update..."
         else
@@ -67,18 +72,26 @@ check_components() {
                     break
                 elif [[ "$UPDATE_CADDY" == "n" || "$UPDATE_CADDY" == "N" ]]; then
                     SKIP_CADDY=true
-                    SKIP_WEBSERVER=true
                     break
                 else
                     warn "$(get_string "install_full_node_please_enter_yn")"
                 fi
             done
         fi
-    elif command -v nginx >/dev/null 2>&1; then
+    fi
+
+    if command -v nginx >/dev/null 2>&1; then
         info "$(get_string "install_full_node_nginx_installed")"
-        DETECTED_WEBSERVER="nginx"
+        if [[ -z "$DETECTED_WEBSERVER" ]]; then
+            DETECTED_WEBSERVER="nginx"
+        fi
         if [[ "$SKIP_WEBSERVER" == "true" ]]; then
             info "SKIP_WEBSERVER=true, skipping..."
+        elif [[ -n "$WEBSERVER" ]]; then
+            if [[ "$WEBSERVER" == "nginx" ]]; then
+                UPDATE_NGINX=true
+                info "WEBSERVER=nginx, will update..."
+            fi
         elif [[ "$UPDATE_NGINX" == "true" ]]; then
             info "UPDATE_NGINX=true, will update..."
         else
@@ -90,7 +103,6 @@ check_components() {
                     break
                 elif [[ "$UPDATE_NGINX" == "n" || "$UPDATE_NGINX" == "N" ]]; then
                     SKIP_NGINX=true
-                    SKIP_WEBSERVER=true
                     break
                 else
                     warn "$(get_string "install_full_node_please_enter_yn")"
@@ -103,6 +115,12 @@ check_components() {
         info "$(get_string "warp_native_already_installed")"
         if [[ "$SKIP_WARP" == "true" ]]; then
             info "SKIP_WARP=true, skipping..."
+        elif [[ "$INSTALL_WARP" == "n" || "$INSTALL_WARP" == "N" ]]; then
+            SKIP_WARP=true
+            info "INSTALL_WARP=$INSTALL_WARP, skipping..."
+        elif [[ "$INSTALL_WARP" == "y" || "$INSTALL_WARP" == "Y" ]]; then
+            SKIP_WARP=false
+            info "INSTALL_WARP=$INSTALL_WARP, will reconfigure..."
         elif [[ "$SKIP_WARP" == "false" ]]; then
             :
         else
@@ -137,7 +155,11 @@ request_data() {
     if [[ "$SKIP_WEBSERVER" != "true" ]]; then
         if [[ -n "$WEBSERVER" ]]; then
             info "WEBSERVER=$WEBSERVER"
-        elif [[ -z "$DETECTED_WEBSERVER" ]]; then
+        elif [[ "$UPDATE_CADDY" == "true" && "$SKIP_NGINX" != "true" && "$UPDATE_NGINX" != "true" ]]; then
+            WEBSERVER="caddy"
+        elif [[ "$UPDATE_NGINX" == "true" && "$SKIP_CADDY" != "true" && "$UPDATE_CADDY" != "true" ]]; then
+            WEBSERVER="nginx"
+        else
             echo ""
             info "$(get_string "install_full_node_webserver_choice")"
             echo -e "${BLUE}1. $(get_string "install_full_node_webserver_caddy")${RESET}"
@@ -155,10 +177,6 @@ request_data() {
                 fi
                 warn "$(get_string "install_full_node_webserver_invalid")"
             done
-        elif [[ "$UPDATE_CADDY" == "true" ]]; then
-            WEBSERVER="caddy"
-        elif [[ "$UPDATE_NGINX" == "true" ]]; then
-            WEBSERVER="nginx"
         fi
     fi
 
@@ -1032,6 +1050,10 @@ main() {
     request_data
 
     info "$(get_string "install_full_node_updating_packages")"
+    while fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        warn "apt is locked by another process, waiting..."
+        sleep 3
+    done
     apt-get update -y
 
     if ! check_docker; then
