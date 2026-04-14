@@ -808,18 +808,26 @@ install_nginx_selfsteal() {
 
     case $CERT_METHOD in
         1)
-            while true; do
-                question "$(get_string "install_nginx_node_enter_cf_token")"
-                CF_API_KEY="$REPLY"
-                if [[ -n "$CF_API_KEY" ]]; then break; fi
-                warn "$(get_string "install_nginx_node_token_empty")"
-            done
-            while true; do
-                question "$(get_string "install_nginx_node_enter_cf_email")"
-                CF_EMAIL="$REPLY"
-                if [[ -n "$CF_EMAIL" ]]; then break; fi
-                warn "$(get_string "install_nginx_node_email_empty")"
-            done
+            if [[ -n "$CF_API_KEY" ]]; then
+                info "CF_API_KEY=***"
+            else
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_cf_token")"
+                    CF_API_KEY="$REPLY"
+                    if [[ -n "$CF_API_KEY" ]]; then break; fi
+                    warn "$(get_string "install_nginx_node_token_empty")"
+                done
+            fi
+            if [[ -n "$CF_EMAIL" ]]; then
+                info "CF_EMAIL=$CF_EMAIL"
+            else
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_cf_email")"
+                    CF_EMAIL="$REPLY"
+                    if [[ -n "$CF_EMAIL" ]]; then break; fi
+                    warn "$(get_string "install_nginx_node_email_empty")"
+                done
+            fi
 
             apt-get install -y python3-certbot-dns-cloudflare
 
@@ -853,12 +861,16 @@ EOL
             CERT_DOMAIN="$base_domain"
             ;;
         2)
-            while true; do
-                question "$(get_string "install_nginx_node_enter_email")"
-                LE_EMAIL="$REPLY"
-                if [[ -n "$LE_EMAIL" ]]; then break; fi
-                warn "$(get_string "install_nginx_node_email_empty")"
-            done
+            if [[ -n "$LE_EMAIL" ]]; then
+                info "LE_EMAIL=$LE_EMAIL"
+            else
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_email")"
+                    LE_EMAIL="$REPLY"
+                    if [[ -n "$LE_EMAIL" ]]; then break; fi
+                    warn "$(get_string "install_nginx_node_email_empty")"
+                done
+            fi
 
             systemctl stop nginx 2>/dev/null || true
 
@@ -876,25 +888,43 @@ EOL
             CERT_DOMAIN="$DOMAIN"
             ;;
         3)
-            while true; do
-                question "$(get_string "install_nginx_node_enter_gcore_token")"
-                GCORE_API_KEY="$REPLY"
-                if [[ -n "$GCORE_API_KEY" ]]; then break; fi
-                warn "$(get_string "install_nginx_node_token_empty")"
-            done
-            while true; do
-                question "$(get_string "install_nginx_node_enter_email")"
-                LE_EMAIL="$REPLY"
-                if [[ -n "$LE_EMAIL" ]]; then break; fi
-                warn "$(get_string "install_nginx_node_email_empty")"
-            done
+            if [[ -n "$GCORE_API_KEY" ]]; then
+                info "GCORE_API_KEY=***"
+            else
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_gcore_token")"
+                    GCORE_API_KEY="$REPLY"
+                    if [[ -n "$GCORE_API_KEY" ]]; then break; fi
+                    warn "$(get_string "install_nginx_node_token_empty")"
+                done
+            fi
+            if [[ -n "$LE_EMAIL" ]]; then
+                info "LE_EMAIL=$LE_EMAIL"
+            else
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_email")"
+                    LE_EMAIL="$REPLY"
+                    if [[ -n "$LE_EMAIL" ]]; then break; fi
+                    warn "$(get_string "install_nginx_node_email_empty")"
+                done
+            fi
 
             if ! certbot plugins 2>/dev/null | grep -q "dns-gcore"; then
+                info "$(get_string "install_nginx_node_installing_gcore_plugin")"
+                apt-get install -y python3-pip >/dev/null 2>&1
                 if python3 -m pip install --help 2>&1 | grep -q "break-system-packages"; then
-                    python3 -m pip install --break-system-packages certbot-dns-gcore >/dev/null 2>&1
+                    python3 -m pip install --break-system-packages certbot-dns-gcore
                 else
-                    python3 -m pip install certbot-dns-gcore >/dev/null 2>&1
+                    python3 -m pip install certbot-dns-gcore
                 fi
+
+                if ! certbot plugins 2>/dev/null | grep -q "dns-gcore"; then
+                    error "$(get_string "install_nginx_node_gcore_plugin_failed")"
+                    exit 1
+                fi
+                success "$(get_string "install_nginx_node_gcore_plugin_installed")"
+            else
+                info "$(get_string "install_nginx_node_gcore_plugin_exists")"
             fi
 
             mkdir -p ~/.secrets/certbot

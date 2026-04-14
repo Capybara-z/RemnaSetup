@@ -58,11 +58,11 @@ Pass parameters via environment variables and a command — the script will run 
 DOMAIN=node.example.com \
 MONITOR_PORT=8443 \
 NODE_PORT=3001 \
-SECRET_KEY="your_key" \
+SECRET_KEY='your_key' \
 WEBSERVER=caddy \
 INSTALL_WARP=y \
 BBR_ANSWER=y \
-sudo -E bash remnasetup.sh install-node
+sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 ```
 
 ### Full node installation with Nginx
@@ -71,15 +71,15 @@ sudo -E bash remnasetup.sh install-node
 DOMAIN=node.example.com \
 MONITOR_PORT=8443 \
 NODE_PORT=3001 \
-SECRET_KEY="your_key" \
+SECRET_KEY='your_key' \
 WEBSERVER=nginx \
 USE_PROXY_PROTOCOL=n \
 CERT_METHOD=1 \
-CF_API_KEY="token" \
-CF_EMAIL="email@example.com" \
+CF_API_KEY='token' \
+CF_EMAIL='email@example.com' \
 INSTALL_WARP=y \
 BBR_ANSWER=y \
-sudo -E bash remnasetup.sh install-node
+sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 ```
 
 ### Skip components
@@ -91,7 +91,7 @@ MONITOR_PORT=8443 \
 SKIP_REMNANODE=true \
 SKIP_WARP=true \
 SKIP_BBR=true \
-sudo -E bash remnasetup.sh install-node
+sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 ```
 
 ### Available commands

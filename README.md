@@ -58,11 +58,11 @@ curl -fsSL https://raw.githubusercontent.com/Capybara-z/RemnaSetup/refs/heads/ma
 DOMAIN=node.example.com \
 MONITOR_PORT=8443 \
 NODE_PORT=3001 \
-SECRET_KEY="ваш_ключ" \
+SECRET_KEY='ваш_ключ' \
 WEBSERVER=caddy \
 INSTALL_WARP=y \
 BBR_ANSWER=y \
-sudo -E bash remnasetup.sh install-node
+sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 ```
 
 ### Полная установка ноды с Nginx
@@ -71,15 +71,15 @@ sudo -E bash remnasetup.sh install-node
 DOMAIN=node.example.com \
 MONITOR_PORT=8443 \
 NODE_PORT=3001 \
-SECRET_KEY="ваш_ключ" \
+SECRET_KEY='ваш_ключ' \
 WEBSERVER=nginx \
 USE_PROXY_PROTOCOL=n \
 CERT_METHOD=1 \
-CF_API_KEY="токен" \
-CF_EMAIL="email@example.com" \
+CF_API_KEY='токен' \
+CF_EMAIL='email@example.com' \
 INSTALL_WARP=y \
 BBR_ANSWER=y \
-sudo -E bash remnasetup.sh install-node
+sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 ```
 
 ### Пропуск компонентов
@@ -91,7 +91,7 @@ MONITOR_PORT=8443 \
 SKIP_REMNANODE=true \
 SKIP_WARP=true \
 SKIP_BBR=true \
-sudo -E bash remnasetup.sh install-node
+sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 ```
 
 ### Доступные команды

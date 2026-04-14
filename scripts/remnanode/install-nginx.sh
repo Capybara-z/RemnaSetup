@@ -56,10 +56,11 @@ install_certbot_dns_cloudflare() {
 install_certbot_dns_gcore() {
     info "$(get_string "install_nginx_node_installing_gcore_plugin")"
     if ! certbot plugins 2>/dev/null | grep -q "dns-gcore"; then
+        apt-get install -y python3-pip >/dev/null 2>&1
         if python3 -m pip install --help 2>&1 | grep -q "break-system-packages"; then
-            python3 -m pip install --break-system-packages certbot-dns-gcore >/dev/null 2>&1
+            python3 -m pip install --break-system-packages certbot-dns-gcore
         else
-            python3 -m pip install certbot-dns-gcore >/dev/null 2>&1
+            python3 -m pip install certbot-dns-gcore
         fi
 
         if certbot plugins 2>/dev/null | grep -q "dns-gcore"; then
