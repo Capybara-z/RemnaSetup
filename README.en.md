@@ -117,14 +117,19 @@ sudo -E bash remnasetup.sh install-node
 | `WEBSERVER` | `caddy` or `nginx` | — |
 | `USE_PROXY_PROTOCOL` | `y` / `n` (nginx only) | — |
 | `CERT_METHOD` | `1` (Cloudflare) / `2` (HTTP-01) / `3` (Gcore) | — |
-| `CF_API_KEY` | Cloudflare API token | — |
-| `CF_EMAIL` | Cloudflare email | — |
+| `CF_API_KEY` | Cloudflare API token (cert_method=1) | — |
+| `CF_EMAIL` | Cloudflare email (cert_method=1) | — |
+| `LE_EMAIL` | Email for certificate (cert_method=2/3) | — |
+| `GCORE_API_KEY` | Gcore API token (cert_method=3) | — |
 | `INSTALL_WARP` | `y` / `n` | — |
 | `BBR_ANSWER` | `y` / `n` | — |
 | `SKIP_WEBSERVER` | `true` — skip web server | — |
 | `SKIP_REMNANODE` | `true` — skip node | — |
 | `SKIP_WARP` | `true` — skip WARP | — |
 | `SKIP_BBR` | `true` — skip BBR | — |
+| `UPDATE_REMNANODE` | `true` — reinstall node | — |
+| `UPDATE_CADDY` | `true` — reinstall Caddy | — |
+| `UPDATE_NGINX` | `true` — reinstall Nginx | — |
 
 Without arguments the script runs in interactive menu mode.
 

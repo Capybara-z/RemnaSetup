@@ -117,14 +117,19 @@ sudo -E bash remnasetup.sh install-node
 | `WEBSERVER` | `caddy` или `nginx` | — |
 | `USE_PROXY_PROTOCOL` | `y` / `n` (для nginx) | — |
 | `CERT_METHOD` | `1` (Cloudflare) / `2` (HTTP-01) / `3` (Gcore) | — |
-| `CF_API_KEY` | Cloudflare API токен | — |
-| `CF_EMAIL` | Cloudflare email | — |
+| `CF_API_KEY` | Cloudflare API токен (cert_method=1) | — |
+| `CF_EMAIL` | Cloudflare email (cert_method=1) | — |
+| `LE_EMAIL` | Email для сертификата (cert_method=2/3) | — |
+| `GCORE_API_KEY` | Gcore API токен (cert_method=3) | — |
 | `INSTALL_WARP` | `y` / `n` | — |
 | `BBR_ANSWER` | `y` / `n` | — |
 | `SKIP_WEBSERVER` | `true` — пропустить веб-сервер | — |
 | `SKIP_REMNANODE` | `true` — пропустить ноду | — |
 | `SKIP_WARP` | `true` — пропустить WARP | — |
 | `SKIP_BBR` | `true` — пропустить BBR | — |
+| `UPDATE_REMNANODE` | `true` — переустановить ноду | — |
+| `UPDATE_CADDY` | `true` — переустановить Caddy | — |
+| `UPDATE_NGINX` | `true` — переустановить Nginx | — |
 
 Без аргументов скрипт работает в обычном интерактивном режиме через меню.
 
