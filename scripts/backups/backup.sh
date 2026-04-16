@@ -25,6 +25,23 @@ while true; do
     fi
 done
 
+UPLOAD_S3=false
+S3_CONFIG="$BACKUP_DIR/auto_backup/backup.sh"
+if [ -f "$S3_CONFIG" ] && grep -q 'S3_ENDPOINT=' "$S3_CONFIG" 2>/dev/null; then
+    S3_ENDPOINT=$(grep '^S3_ENDPOINT=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
+    if [ -n "$S3_ENDPOINT" ]; then
+        while true; do
+            question "$(get_string "backup_upload_s3")"
+            if [[ "$REPLY" == "y" || "$REPLY" == "Y" ]]; then
+                UPLOAD_S3=true
+                break
+            elif [[ "$REPLY" == "n" || "$REPLY" == "N" ]]; then
+                break
+            fi
+        done
+    fi
+fi
+
 echo
 
 for cmd in docker tar 7z; do
@@ -98,39 +115,27 @@ rm -rf "$TMP_DIR"
 
 success "$(get_string "backup_ready" "$BACKUP_DIR/$FINAL_ARCHIVE")"
 
-S3_CONFIG="$BACKUP_DIR/auto_backup/backup.sh"
-if [ -f "$S3_CONFIG" ] && grep -q 'S3_ENDPOINT=' "$S3_CONFIG" 2>/dev/null; then
-    S3_ENDPOINT=$(grep '^S3_ENDPOINT=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
-    if [ -n "$S3_ENDPOINT" ]; then
-        while true; do
-            question "$(get_string "backup_upload_s3")"
-            if [[ "$REPLY" == "y" || "$REPLY" == "Y" ]]; then
-                S3_ACCESS_KEY=$(grep '^S3_ACCESS_KEY=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
-                S3_SECRET_KEY=$(grep '^S3_SECRET_KEY=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
-                S3_BUCKET=$(grep '^S3_BUCKET=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
-                S3_REGION=$(grep '^S3_REGION=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
-                S3_PATH=$(grep '^S3_PATH=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
+if [ "$UPLOAD_S3" = true ]; then
+    S3_ACCESS_KEY=$(grep '^S3_ACCESS_KEY=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
+    S3_SECRET_KEY=$(grep '^S3_SECRET_KEY=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
+    S3_BUCKET=$(grep '^S3_BUCKET=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
+    S3_REGION=$(grep '^S3_REGION=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
+    S3_PATH=$(grep '^S3_PATH=' "$S3_CONFIG" | head -1 | cut -d'"' -f2)
 
-                export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY"
-                export AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY"
+    export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY"
+    export AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY"
 
-                S3_PREFIX="${S3_PATH%/}"
-                S3_OBJECT_KEY="${S3_PREFIX}/${FINAL_ARCHIVE}"
+    S3_PREFIX="${S3_PATH%/}"
+    S3_OBJECT_KEY="${S3_PREFIX}/${FINAL_ARCHIVE}"
 
-                info "$(get_string "backup_s3_uploading")"
-                if aws s3 cp "$BACKUP_DIR/$FINAL_ARCHIVE" "s3://${S3_BUCKET}/${S3_OBJECT_KEY}" \
-                    --endpoint-url "$S3_ENDPOINT" \
-                    --region "${S3_REGION:-us-east-1}" \
-                    --quiet; then
-                    success "$(get_string "backup_s3_uploaded" "$S3_OBJECT_KEY")"
-                else
-                    error "$(get_string "backup_s3_upload_failed")"
-                fi
-                break
-            elif [[ "$REPLY" == "n" || "$REPLY" == "N" ]]; then
-                break
-            fi
-        done
+    info "$(get_string "backup_s3_uploading")"
+    if aws s3 cp "$BACKUP_DIR/$FINAL_ARCHIVE" "s3://${S3_BUCKET}/${S3_OBJECT_KEY}" \
+        --endpoint-url "$S3_ENDPOINT" \
+        --region "${S3_REGION:-us-east-1}" \
+        --quiet; then
+        success "$(get_string "backup_s3_uploaded" "$S3_OBJECT_KEY")"
+    else
+        error "$(get_string "backup_s3_upload_failed")"
     fi
 fi
 

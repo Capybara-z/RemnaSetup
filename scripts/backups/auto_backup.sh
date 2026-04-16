@@ -221,14 +221,26 @@ elif [ "$DEST_CHOICE" = "2" ]; then
         warn "$(get_string "auto_backup_s3_field_required")"
     done
 
-    question "$(get_string "auto_backup_s3_enter_region")"
-    S3_REGION="${REPLY:-us-east-1}"
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_region")"
+        S3_REGION="$REPLY"
+        if [[ -n "$S3_REGION" ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
 
-    question "$(get_string "auto_backup_s3_enter_path")"
-    S3_PATH="${REPLY:-backups}"
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_path")"
+        S3_PATH="$REPLY"
+        if [[ -n "$S3_PATH" ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
 
-    question "$(get_string "auto_backup_s3_enter_keep")"
-    S3_KEEP="${REPLY:-10}"
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_keep")"
+        S3_KEEP="$REPLY"
+        if [[ "$S3_KEEP" =~ ^[0-9]+$ ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
 
     if ! command -v aws &>/dev/null; then
         info "$(get_string "auto_backup_s3_installing_awscli")"
