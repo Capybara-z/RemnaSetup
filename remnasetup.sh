@@ -230,11 +230,13 @@ handle_command() {
 }
 
 main() {
-    select_language
-
     if [[ -n "$1" ]]; then
+        LANGUAGE="${LANGUAGE:-ru}"
+        select_language
         handle_command "$1"
     fi
+
+    select_language
 
     while true; do
         display_main_menu

@@ -130,6 +130,7 @@ sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 | `UPDATE_REMNANODE` | `true` — переустановить ноду | — |
 | `UPDATE_CADDY` | `true` — переустановить Caddy | — |
 | `UPDATE_NGINX` | `true` — переустановить Nginx | — |
+| `LANGUAGE` | `ru` / `en` | `ru` |
 
 Без аргументов скрипт работает в обычном интерактивном режиме через меню.
 

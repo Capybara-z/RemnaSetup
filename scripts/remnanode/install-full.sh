@@ -119,8 +119,8 @@ check_components() {
             SKIP_WARP=true
             info "INSTALL_WARP=$INSTALL_WARP, skipping..."
         elif [[ "$INSTALL_WARP" == "y" || "$INSTALL_WARP" == "Y" ]]; then
-            SKIP_WARP=false
-            info "INSTALL_WARP=$INSTALL_WARP, will reconfigure..."
+            SKIP_WARP=true
+            info "WARP already installed, skipping..."
         elif [[ "$SKIP_WARP" == "false" ]]; then
             :
         else
@@ -153,12 +153,40 @@ check_components() {
 
 request_data() {
     if [[ "$SKIP_WEBSERVER" != "true" ]]; then
+        if [[ -n "$DOMAIN" ]]; then
+            info "DOMAIN=$DOMAIN"
+        else
+            while true; do
+                question "$(get_string "install_full_node_enter_domain")"
+                DOMAIN="$REPLY"
+                if [[ "$DOMAIN" == "n" || "$DOMAIN" == "N" ]]; then
+                    SKIP_WEBSERVER=true
+                    break
+                elif [[ -n "$DOMAIN" ]]; then
+                    break
+                fi
+                warn "$(get_string "install_full_node_domain_empty")"
+            done
+        fi
+    fi
+
+    if [[ "$SKIP_WEBSERVER" != "true" ]]; then
+        if [[ -n "$MONITOR_PORT" ]]; then
+            info "MONITOR_PORT=$MONITOR_PORT"
+        else
+            while true; do
+                question "$(get_string "install_full_node_enter_port")"
+                MONITOR_PORT="$REPLY"
+                MONITOR_PORT=${MONITOR_PORT:-8443}
+                if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
+                    break
+                fi
+                warn "$(get_string "install_full_node_port_must_be_number")"
+            done
+        fi
+
         if [[ -n "$WEBSERVER" ]]; then
             info "WEBSERVER=$WEBSERVER"
-        elif [[ "$UPDATE_CADDY" == "true" && "$SKIP_NGINX" != "true" && "$UPDATE_NGINX" != "true" ]]; then
-            WEBSERVER="caddy"
-        elif [[ "$UPDATE_NGINX" == "true" && "$SKIP_CADDY" != "true" && "$UPDATE_CADDY" != "true" ]]; then
-            WEBSERVER="nginx"
         else
             echo ""
             info "$(get_string "install_full_node_webserver_choice")"
@@ -178,102 +206,8 @@ request_data() {
                 warn "$(get_string "install_full_node_webserver_invalid")"
             done
         fi
-    fi
 
-    if [[ "$SKIP_WEBSERVER" != "true" && "$WEBSERVER" == "caddy" ]]; then
-        if [[ -n "$DOMAIN" ]]; then
-            info "DOMAIN=$DOMAIN"
-        else
-            while true; do
-                question "$(get_string "install_full_node_enter_domain")"
-                DOMAIN="$REPLY"
-                if [[ "$DOMAIN" == "n" || "$DOMAIN" == "N" ]]; then
-                    while true; do
-                        question "$(get_string "install_full_node_confirm_skip_caddy")"
-                        CONFIRM="$REPLY"
-                        if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
-                            SKIP_WEBSERVER=true
-                            break
-                        elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
-                            break
-                        else
-                            warn "$(get_string "install_full_node_please_enter_yn")"
-                        fi
-                    done
-                    if [[ "$SKIP_WEBSERVER" == "true" ]]; then
-                        break
-                    fi
-                elif [[ -n "$DOMAIN" ]]; then
-                    break
-                fi
-                warn "$(get_string "install_full_node_domain_empty")"
-            done
-        fi
-
-        if [[ "$SKIP_WEBSERVER" != "true" ]]; then
-            if [[ -n "$MONITOR_PORT" ]]; then
-                info "MONITOR_PORT=$MONITOR_PORT"
-            else
-                while true; do
-                    question "$(get_string "install_full_node_enter_port")"
-                    MONITOR_PORT="$REPLY"
-                    if [[ "$MONITOR_PORT" == "n" || "$MONITOR_PORT" == "N" ]]; then
-                        while true; do
-                            question "$(get_string "install_full_node_confirm_skip_caddy")"
-                            CONFIRM="$REPLY"
-                            if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
-                                SKIP_WEBSERVER=true
-                                break
-                            elif [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
-                                break
-                            else
-                                warn "$(get_string "install_full_node_please_enter_yn")"
-                            fi
-                        done
-                        if [[ "$SKIP_WEBSERVER" == "true" ]]; then
-                            break
-                        fi
-                    fi
-                    MONITOR_PORT=${MONITOR_PORT:-8443}
-                    if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
-                        break
-                    fi
-                    warn "$(get_string "install_full_node_port_must_be_number")"
-                done
-            fi
-        fi
-    elif [[ "$SKIP_WEBSERVER" != "true" && "$WEBSERVER" == "nginx" ]]; then
-        if [[ -n "$DOMAIN" ]]; then
-            info "DOMAIN=$DOMAIN"
-        else
-            while true; do
-                question "$(get_string "install_full_node_enter_domain")"
-                DOMAIN="$REPLY"
-                if [[ "$DOMAIN" == "n" || "$DOMAIN" == "N" ]]; then
-                    SKIP_WEBSERVER=true
-                    break
-                elif [[ -n "$DOMAIN" ]]; then
-                    break
-                fi
-                warn "$(get_string "install_full_node_domain_empty")"
-            done
-        fi
-
-        if [[ "$SKIP_WEBSERVER" != "true" ]]; then
-            if [[ -n "$MONITOR_PORT" ]]; then
-                info "MONITOR_PORT=$MONITOR_PORT"
-            else
-                while true; do
-                    question "$(get_string "install_full_node_enter_port")"
-                    MONITOR_PORT="$REPLY"
-                    MONITOR_PORT=${MONITOR_PORT:-8443}
-                    if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
-                        break
-                    fi
-                    warn "$(get_string "install_full_node_port_must_be_number")"
-                done
-            fi
-
+        if [[ "$WEBSERVER" == "nginx" ]]; then
             if [[ -n "$USE_PROXY_PROTOCOL" ]]; then
                 info "USE_PROXY_PROTOCOL=$USE_PROXY_PROTOCOL"
             else
