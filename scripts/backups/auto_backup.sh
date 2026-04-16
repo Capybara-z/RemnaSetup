@@ -244,13 +244,13 @@ elif [ "$DEST_CHOICE" = "2" ]; then
 
     if ! command -v aws &>/dev/null; then
         info "$(get_string "auto_backup_s3_installing_awscli")"
-        if command -v pip3 &>/dev/null; then
-            pip3 install awscli --break-system-packages 2>/dev/null || pip3 install awscli 2>/dev/null
-        elif command -v pip &>/dev/null; then
-            pip install awscli --break-system-packages 2>/dev/null || pip install awscli 2>/dev/null
-        else
-            apt-get install -y python3-pip >/dev/null 2>&1
-            pip3 install awscli --break-system-packages 2>/dev/null || pip3 install awscli 2>/dev/null
+        if command -v apt-get &>/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y awscli
+        elif command -v yum &>/dev/null; then
+            sudo yum install -y awscli
+        elif command -v apk &>/dev/null; then
+            sudo apk add aws-cli
         fi
         if ! command -v aws &>/dev/null; then
             error "$(get_string "auto_backup_s3_awscli_failed")"
