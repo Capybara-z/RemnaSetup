@@ -283,7 +283,8 @@ ensure_backup_dependencies
 
 cleanup_old_crons
 
-(crontab -l 2>/dev/null; echo "$CRON_SCHEDULE $AUTO_BACKUP_DIR/backup.sh") | crontab -
+BACKUP_LOG="$BACKUP_DIR/backup.log"
+(crontab -l 2>/dev/null; echo "$CRON_SCHEDULE $AUTO_BACKUP_DIR/backup.sh >> $BACKUP_LOG 2>&1") | crontab -
 
 success "$(get_string "auto_backup_configured")"
 if [ "$BACKUP_MODE" = "daily" ]; then
