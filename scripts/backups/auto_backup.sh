@@ -252,8 +252,8 @@ elif [ "$DEST_CHOICE" = "2" ]; then
     sed -i "s|S3_SECRET_KEY=\"\"|S3_SECRET_KEY=\"$S3_SECRET_KEY\"|" "$AUTO_BACKUP_DIR/backup.sh"
     sed -i "s|S3_BUCKET=\"\"|S3_BUCKET=\"$S3_BUCKET\"|" "$AUTO_BACKUP_DIR/backup.sh"
     sed -i "s|S3_REGION=\"\"|S3_REGION=\"$S3_REGION\"|" "$AUTO_BACKUP_DIR/backup.sh"
-    sed -i "s|S3_PATH=\"backups\"|S3_PATH=\"$S3_PATH\"|" "$AUTO_BACKUP_DIR/backup.sh"
-    sed -i "s|S3_KEEP=10|S3_KEEP=$S3_KEEP|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_PATH=\"\"|S3_PATH=\"$S3_PATH\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_KEEP=\"\"|S3_KEEP=\"$S3_KEEP\"|" "$AUTO_BACKUP_DIR/backup.sh"
     sed -i "s|LANGUAGE=\"\"|LANGUAGE=\"$LANGUAGE\"|" "$AUTO_BACKUP_DIR/backup.sh"
 
 else

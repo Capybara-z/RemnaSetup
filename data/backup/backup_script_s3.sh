@@ -16,8 +16,8 @@ S3_ACCESS_KEY=""
 S3_SECRET_KEY=""
 S3_BUCKET=""
 S3_REGION=""
-S3_PATH="backups"
-S3_KEEP=10
+S3_PATH=""
+S3_KEEP=""
 
 START_TIME=$(date +%s)
 

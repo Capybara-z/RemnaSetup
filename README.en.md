@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/Capybara-z/RemnaSetup/refs/heads/ma
 - Full installation (Remnawave + Caddy)
 - Install panel / subscription page / Caddy separately
 - Update all components
-- Backup and restore (manual, automatic, with Telegram notifications)
+- Backup and restore (manual, automatic, with Telegram or S3-compatible storage)
 
 ### Remnanode (node)
 - Full installation (Remnanode + Caddy/Nginx + BBR + WARP)
@@ -133,6 +133,36 @@ sudo -E bash /opt/remnasetup/remnasetup.sh install-node
 | `LANGUAGE` | `ru` / `en` | `ru` |
 
 Without arguments the script runs in interactive menu mode.
+
+---
+
+## Automatic backups
+
+Schedule: daily at a specific time or every N hours (configured via cron).
+
+Three storage options are available:
+
+1. **Telegram** — send archive to a Telegram chat via bot
+2. **S3 storage** — upload to any S3-compatible storage
+3. **Local** — server only
+
+### S3 storage
+
+Any S3-compatible storage is supported (Yandex Object Storage, Selectel, Timeweb, MinIO, etc.).
+
+Configuration parameters:
+
+| Parameter | Description | Default |
+|---|---|---|
+| Endpoint | S3 service URL | — |
+| Access Key | Access key | — |
+| Secret Key | Secret key | — |
+| Bucket | Bucket name | — |
+| Region | Region | — |
+| Path | Path (prefix) inside the bucket | — |
+| Keep | Number of backups to keep in S3 (`0` — keep all) | — |
+
+When creating a manual backup, if S3 was previously configured, the script will offer to upload the archive to the same storage.
 
 ---
 
