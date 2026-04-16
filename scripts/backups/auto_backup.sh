@@ -167,31 +167,101 @@ while true; do
 done
 
 while true; do
-    question "$(get_string "auto_backup_use_telegram")"
-    case $REPLY in
-        [Yy]* ) USE_TELEGRAM=true; break;;
-        [Nn]* ) USE_TELEGRAM=false; break;;
-        * ) warn "$(get_string "auto_backup_please_answer_yn")";;
-    esac
+    question "$(get_string "auto_backup_select_destination")"
+    DEST_CHOICE="$REPLY"
+    if [[ "$DEST_CHOICE" =~ ^[1-3]$ ]]; then
+        break
+    fi
+    warn "$(get_string "auto_backup_select_destination_invalid")"
 done
 
-if [ "$USE_TELEGRAM" = true ]; then
+BACKUP_DEST="local"
+
+if [ "$DEST_CHOICE" = "1" ]; then
+    BACKUP_DEST="telegram"
     question "$(get_string "auto_backup_enter_bot_token")"
     BOT_TOKEN="$REPLY"
-    
+
     question "$(get_string "auto_backup_enter_chat_id")"
     CHAT_ID="$REPLY"
 
     cp "$SCRIPT_DIR/backup_script_tg.sh" "$AUTO_BACKUP_DIR/backup.sh"
-    sed -i "s/BOT_TOKEN=\"\"/BOT_TOKEN=\"$BOT_TOKEN\"/" "$AUTO_BACKUP_DIR/backup.sh"
-    sed -i "s/CHAT_ID=\"\"/CHAT_ID=\"$CHAT_ID\"/" "$AUTO_BACKUP_DIR/backup.sh"
-    sed -i "s/LANGUAGE=\"\"/LANGUAGE=\"$LANGUAGE\"/" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|BOT_TOKEN=\"\"|BOT_TOKEN=\"$BOT_TOKEN\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|CHAT_ID=\"\"|CHAT_ID=\"$CHAT_ID\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|LANGUAGE=\"\"|LANGUAGE=\"$LANGUAGE\"|" "$AUTO_BACKUP_DIR/backup.sh"
+
+elif [ "$DEST_CHOICE" = "2" ]; then
+    BACKUP_DEST="s3"
+
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_endpoint")"
+        S3_ENDPOINT="$REPLY"
+        if [[ -n "$S3_ENDPOINT" ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
+
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_access_key")"
+        S3_ACCESS_KEY="$REPLY"
+        if [[ -n "$S3_ACCESS_KEY" ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
+
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_secret_key")"
+        S3_SECRET_KEY="$REPLY"
+        if [[ -n "$S3_SECRET_KEY" ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
+
+    while true; do
+        question "$(get_string "auto_backup_s3_enter_bucket")"
+        S3_BUCKET="$REPLY"
+        if [[ -n "$S3_BUCKET" ]]; then break; fi
+        warn "$(get_string "auto_backup_s3_field_required")"
+    done
+
+    question "$(get_string "auto_backup_s3_enter_region")"
+    S3_REGION="${REPLY:-us-east-1}"
+
+    question "$(get_string "auto_backup_s3_enter_path")"
+    S3_PATH="${REPLY:-backups}"
+
+    question "$(get_string "auto_backup_s3_enter_keep")"
+    S3_KEEP="${REPLY:-10}"
+
+    if ! command -v aws &>/dev/null; then
+        info "$(get_string "auto_backup_s3_installing_awscli")"
+        if command -v pip3 &>/dev/null; then
+            pip3 install awscli --break-system-packages 2>/dev/null || pip3 install awscli 2>/dev/null
+        elif command -v pip &>/dev/null; then
+            pip install awscli --break-system-packages 2>/dev/null || pip install awscli 2>/dev/null
+        else
+            apt-get install -y python3-pip >/dev/null 2>&1
+            pip3 install awscli --break-system-packages 2>/dev/null || pip3 install awscli 2>/dev/null
+        fi
+        if ! command -v aws &>/dev/null; then
+            error "$(get_string "auto_backup_s3_awscli_failed")"
+            read -n 1 -s -r -p "$(get_string "auto_backup_press_key")"; exit 1
+        fi
+    fi
+
+    cp "$SCRIPT_DIR/backup_script_s3.sh" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_ENDPOINT=\"\"|S3_ENDPOINT=\"$S3_ENDPOINT\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_ACCESS_KEY=\"\"|S3_ACCESS_KEY=\"$S3_ACCESS_KEY\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_SECRET_KEY=\"\"|S3_SECRET_KEY=\"$S3_SECRET_KEY\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_BUCKET=\"\"|S3_BUCKET=\"$S3_BUCKET\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_REGION=\"\"|S3_REGION=\"$S3_REGION\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_PATH=\"backups\"|S3_PATH=\"$S3_PATH\"|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|S3_KEEP=10|S3_KEEP=$S3_KEEP|" "$AUTO_BACKUP_DIR/backup.sh"
+    sed -i "s|LANGUAGE=\"\"|LANGUAGE=\"$LANGUAGE\"|" "$AUTO_BACKUP_DIR/backup.sh"
+
 else
     cp "$SCRIPT_DIR/backup_script.sh" "$AUTO_BACKUP_DIR/backup.sh"
 fi
 
-sed -i "s/PASSWORD=\"\"/PASSWORD=\"$PASSWORD\"/" "$AUTO_BACKUP_DIR/backup.sh"
-sed -i "s/-mtime +3/-mtime +$STORAGE_DAYS/" "$AUTO_BACKUP_DIR/backup.sh"
+sed -i "s|PASSWORD=\"\"|PASSWORD=\"$PASSWORD\"|" "$AUTO_BACKUP_DIR/backup.sh"
+sed -i "s|-mtime +3|-mtime +$STORAGE_DAYS|" "$AUTO_BACKUP_DIR/backup.sh"
 
 chmod +x "$AUTO_BACKUP_DIR/backup.sh"
 
@@ -212,8 +282,10 @@ else
 fi
 DAYS_WORD=$(get_days_word "$STORAGE_DAYS")
 success "$(get_string "auto_backup_storage_days" "$STORAGE_DAYS" "$DAYS_WORD")"
-if [ "$USE_TELEGRAM" = true ]; then
+if [ "$BACKUP_DEST" = "telegram" ]; then
     success "$(get_string "auto_backup_telegram_configured")"
+elif [ "$BACKUP_DEST" = "s3" ]; then
+    success "$(get_string "auto_backup_s3_configured")"
 fi
 
 read -n 1 -s -r -p "$(get_string "auto_backup_press_key")"
