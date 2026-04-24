@@ -65,8 +65,8 @@ install_caddy() {
 
 setup_site() {
     info "$(get_string "install_caddy_node_setup_site")"
-    chmod -R 777 /var
     mkdir -p /var/www/site
+    chmod -R 777 /var/www/site
 
     RANDOM_META_ID=$(openssl rand -hex 16)
     RANDOM_CLASS=$(openssl rand -hex 8)

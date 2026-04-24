@@ -9,7 +9,12 @@ if [ -f "$LANGUAGE_FILE" ]; then
 fi
 
 select_language() {
-    if [ -z "$LANGUAGE" ] || [ "$LANGUAGE" != "en" ] && [ "$LANGUAGE" != "ru" ]; then
+    if [ -z "$LANGUAGE" ] || ([ "$LANGUAGE" != "en" ] && [ "$LANGUAGE" != "ru" ]); then
+        if [[ "$NON_INTERACTIVE" == "true" || "$NON_INTERACTIVE" == "1" || ! -t 0 ]]; then
+            LANGUAGE="ru"
+            echo "$LANGUAGE" > "$LANGUAGE_FILE"
+            return
+        fi
         while true; do
             clear
             echo -e "${MAGENTA}────────────────────────────────────────────────────────────${RESET}"

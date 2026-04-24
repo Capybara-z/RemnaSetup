@@ -680,13 +680,13 @@ install_caddy() {
     apt-get install -y caddy
 
     info "$(get_string "install_full_node_setup_site")"
-    chmod -R 777 /var
 
     if [ -d "/var/www/site" ]; then
         rm -rf /var/www/site/*
     else
         mkdir -p /var/www/site
     fi
+    chmod -R 777 /var/www/site
 
     RANDOM_META_ID=$(openssl rand -hex 16)
     RANDOM_CLASS=$(openssl rand -hex 8)
