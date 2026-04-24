@@ -232,6 +232,11 @@ handle_command() {
 main() {
     if [[ -n "$1" ]]; then
         LANGUAGE="${LANGUAGE:-ru}"
+        export LANGUAGE
+        if [[ -z "$NON_INTERACTIVE" ]]; then
+            NON_INTERACTIVE=true
+        fi
+        export NON_INTERACTIVE
         select_language
         handle_command "$1"
     fi

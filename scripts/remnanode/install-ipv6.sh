@@ -85,7 +85,7 @@ main() {
         done
     fi
     
-    read -n 1 -s -r -p "$(get_string "press_any_key")"
+    pause_press_key "$(get_string "press_any_key")"
     exit 0
 }
 

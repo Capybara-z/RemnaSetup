@@ -155,6 +155,28 @@ ensure_package() {
     install_packages "$install_name"
 }
 
+is_non_interactive() {
+    if [[ "$NON_INTERACTIVE" == "true" || "$NON_INTERACTIVE" == "1" ]]; then
+        return 0
+    fi
+    if [[ "$CI" == "true" || "$CI" == "1" ]]; then
+        return 0
+    fi
+    if [ ! -t 0 ]; then
+        return 0
+    fi
+    return 1
+}
+
+pause_press_key() {
+    local prompt="$1"
+    if is_non_interactive; then
+        return 0
+    fi
+    read -n 1 -s -r -p "$prompt"
+    echo
+}
+
 export -f info
 export -f warn
 export -f error
@@ -172,3 +194,5 @@ export -f detect_package_manager
 export -f update_package_list
 export -f install_packages
 export -f ensure_package
+export -f is_non_interactive
+export -f pause_press_key

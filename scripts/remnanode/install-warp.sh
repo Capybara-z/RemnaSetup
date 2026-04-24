@@ -19,6 +19,24 @@ trap restore_dns EXIT
 check_warp_native() {
     if command -v wgcf >/dev/null 2>&1 && [ -f "/etc/wireguard/warp.conf" ]; then
         info "$(get_string "warp_native_already_installed")"
+
+        if [[ "$RECONFIGURE" == "y" || "$RECONFIGURE" == "Y" || "$RECONFIGURE" == "true" ]]; then
+            info "RECONFIGURE=$RECONFIGURE, will reinstall..."
+            return 0
+        fi
+
+        if [[ "$RECONFIGURE" == "n" || "$RECONFIGURE" == "N" || "$RECONFIGURE" == "false" ]]; then
+            info "RECONFIGURE=$RECONFIGURE, skipping..."
+            pause_press_key "$(get_string "warp_native_press_key")"
+            exit 0
+        fi
+
+        if is_non_interactive; then
+            info "Non-interactive mode: RECONFIGURE not set, skipping reinstall."
+            pause_press_key "$(get_string "warp_native_press_key")"
+            exit 0
+        fi
+
         while true; do
             question "$(get_string "warp_native_reconfigure")"
             RECONFIGURE="$REPLY"
@@ -26,7 +44,7 @@ check_warp_native() {
                 return 0
             elif [[ "$RECONFIGURE" == "n" || "$RECONFIGURE" == "N" ]]; then
                 info "$(get_string "warp_native_skip_installation")"
-                read -n 1 -s -r -p "$(get_string "warp_native_press_key")"
+                pause_press_key "$(get_string "warp_native_press_key")"
                 exit 0
             else
                 warn "$(get_string "warp_native_please_enter_yn")"
@@ -310,7 +328,7 @@ main() {
     fi
 
     install_warp_native
-    read -n 1 -s -r -p "$(get_string "warp_native_press_key")"
+    pause_press_key "$(get_string "warp_native_press_key")"
     exit 0
 }
 

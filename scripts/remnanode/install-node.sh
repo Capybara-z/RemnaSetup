@@ -57,6 +57,29 @@ EOF
 check_remnanode() {
     if [ -f "/opt/remnanode/docker-compose.yml" ]; then
         info "$(get_string "install_node_already_installed")"
+
+        if [[ "$SKIP_REMNANODE" == "true" ]]; then
+            info "SKIP_REMNANODE=true, exiting..."
+            pause_press_key "$(get_string "install_node_press_key")"
+            exit 0
+        fi
+
+        if [[ "$UPDATE_REMNANODE" == "true" || "$UPDATE_REMNANODE" == "y" || "$UPDATE_REMNANODE" == "Y" ]]; then
+            info "UPDATE_REMNANODE=true, will update..."
+            return 0
+        fi
+
+        if [[ "$UPDATE_REMNANODE" == "n" || "$UPDATE_REMNANODE" == "N" || "$UPDATE_REMNANODE" == "false" ]]; then
+            info "UPDATE_REMNANODE=$UPDATE_REMNANODE, skipping..."
+            pause_press_key "$(get_string "install_node_press_key")"
+            exit 0
+        fi
+
+        if is_non_interactive; then
+            info "Non-interactive mode: UPDATE_REMNANODE not set, defaulting to update."
+            return 0
+        fi
+
         while true; do
             question "$(get_string "install_node_update_settings")"
             REINSTALL="$REPLY"
@@ -64,7 +87,7 @@ check_remnanode() {
                 return 0
             elif [[ "$REINSTALL" == "n" || "$REINSTALL" == "N" ]]; then
                 info "$(get_string "install_node_already_installed")"
-                read -n 1 -s -r -p "$(get_string "install_node_press_key")"
+                pause_press_key "$(get_string "install_node_press_key")"
                 exit 0
                 return 1
             else
@@ -108,29 +131,53 @@ install_remnanode() {
 
 main() {
     if check_remnanode; then
-        cd /opt/remnanode
-        docker compose down
-        rm -f .env
+        if [ -d /opt/remnanode ]; then
+            cd /opt/remnanode || cd /
+            docker compose down 2>/dev/null || true
+            rm -f /opt/remnanode/.env
+        fi
     fi
 
-    while true; do
-        question "$(get_string "install_node_enter_app_port")"
-        NODE_PORT="$REPLY"
-        NODE_PORT=${NODE_PORT:-3001}
+    if [[ -n "$NODE_PORT" ]]; then
         if [[ "$NODE_PORT" =~ ^[0-9]+$ ]]; then
-            break
+            info "NODE_PORT=$NODE_PORT"
+        else
+            error "$(get_string "install_node_port_must_be_number")"
+            exit 1
         fi
-        warn "$(get_string "install_node_port_must_be_number")"
-    done
+    else
+        if is_non_interactive; then
+            NODE_PORT=3001
+            info "Non-interactive mode: NODE_PORT defaulted to $NODE_PORT"
+        else
+            while true; do
+                question "$(get_string "install_node_enter_app_port")"
+                NODE_PORT="$REPLY"
+                NODE_PORT=${NODE_PORT:-3001}
+                if [[ "$NODE_PORT" =~ ^[0-9]+$ ]]; then
+                    break
+                fi
+                warn "$(get_string "install_node_port_must_be_number")"
+            done
+        fi
+    fi
 
-    while true; do
-        question "$(get_string "install_node_enter_ssl_cert")"
-        SECRET_KEY="$REPLY"
-        if [[ -n "$SECRET_KEY" ]]; then
-            break
+    if [[ -n "$SECRET_KEY" ]]; then
+        info "SECRET_KEY=***"
+    else
+        if is_non_interactive; then
+            error "SECRET_KEY environment variable is required in non-interactive mode."
+            exit 1
         fi
-        warn "$(get_string "install_node_ssl_cert_empty")"
-    done
+        while true; do
+            question "$(get_string "install_node_enter_ssl_cert")"
+            SECRET_KEY="$REPLY"
+            if [[ -n "$SECRET_KEY" ]]; then
+                break
+            fi
+            warn "$(get_string "install_node_ssl_cert_empty")"
+        done
+    fi
 
     if ! check_docker; then
         install_docker
@@ -141,8 +188,8 @@ main() {
     install_remnanode
 
     success "$(get_string "install_node_complete")"
-    read -n 1 -s -r -p "$(get_string "install_node_press_key")"
+    pause_press_key "$(get_string "install_node_press_key")"
     exit 0
 }
 
-main 
+main

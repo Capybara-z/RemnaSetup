@@ -15,7 +15,7 @@ update_panel() {
 main() {
     update_panel
     success "$(get_string "update_node_complete")"
-    read -n 1 -s -r -p "$(get_string "update_node_press_key")"
+    pause_press_key "$(get_string "update_node_press_key")"
     exit 0
 }
 

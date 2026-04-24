@@ -7,6 +7,23 @@ source "/opt/remnasetup/scripts/common/languages.sh"
 check_caddy() {
     if command -v caddy >/dev/null 2>&1; then
         info "$(get_string "install_caddy_node_already_installed")"
+
+        if [[ "$UPDATE_CONFIG" == "y" || "$UPDATE_CONFIG" == "Y" || "$UPDATE_CONFIG" == "true" ]]; then
+            info "UPDATE_CONFIG=$UPDATE_CONFIG, will update..."
+            return 0
+        fi
+
+        if [[ "$UPDATE_CONFIG" == "n" || "$UPDATE_CONFIG" == "N" || "$UPDATE_CONFIG" == "false" ]]; then
+            info "UPDATE_CONFIG=$UPDATE_CONFIG, skipping..."
+            pause_press_key "$(get_string "install_caddy_node_press_key")"
+            exit 0
+        fi
+
+        if is_non_interactive; then
+            info "Non-interactive mode: UPDATE_CONFIG not set, defaulting to update."
+            return 0
+        fi
+
         while true; do
             question "$(get_string "install_caddy_node_update_config")"
             UPDATE_CONFIG="$REPLY"
@@ -14,7 +31,7 @@ check_caddy() {
                 return 0
             elif [[ "$UPDATE_CONFIG" == "n" || "$UPDATE_CONFIG" == "N" ]]; then
                 info "$(get_string "install_caddy_node_already_installed")"
-                read -n 1 -s -r -p "$(get_string "install_caddy_node_press_key")"
+                pause_press_key "$(get_string "install_caddy_node_press_key")"
                 exit 0
                 return 1
             else
@@ -83,24 +100,46 @@ main() {
         return 1
     fi
 
-    while true; do
-        question "$(get_string "install_caddy_node_enter_domain")"
-        DOMAIN="$REPLY"
-        if [[ -n "$DOMAIN" ]]; then
-            break
+    if [[ -n "$DOMAIN" ]]; then
+        info "DOMAIN=$DOMAIN"
+    else
+        if is_non_interactive; then
+            error "DOMAIN environment variable is required in non-interactive mode."
+            exit 1
         fi
-        warn "$(get_string "install_caddy_node_domain_empty")"
-    done
+        while true; do
+            question "$(get_string "install_caddy_node_enter_domain")"
+            DOMAIN="$REPLY"
+            if [[ -n "$DOMAIN" ]]; then
+                break
+            fi
+            warn "$(get_string "install_caddy_node_domain_empty")"
+        done
+    fi
 
-    while true; do
-        question "$(get_string "install_caddy_node_enter_port")"
-        MONITOR_PORT="$REPLY"
-        MONITOR_PORT=${MONITOR_PORT:-8443}
+    if [[ -n "$MONITOR_PORT" ]]; then
         if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
-            break
+            info "MONITOR_PORT=$MONITOR_PORT"
+        else
+            error "$(get_string "install_caddy_node_port_must_be_number")"
+            exit 1
         fi
-        warn "$(get_string "install_caddy_node_port_must_be_number")"
-    done
+    else
+        if is_non_interactive; then
+            MONITOR_PORT=8443
+            info "Non-interactive mode: MONITOR_PORT defaulted to $MONITOR_PORT"
+        else
+            while true; do
+                question "$(get_string "install_caddy_node_enter_port")"
+                MONITOR_PORT="$REPLY"
+                MONITOR_PORT=${MONITOR_PORT:-8443}
+                if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
+                    break
+                fi
+                warn "$(get_string "install_caddy_node_port_must_be_number")"
+            done
+        fi
+    fi
 
     if ! command -v caddy >/dev/null 2>&1; then
         install_caddy
@@ -110,7 +149,7 @@ main() {
     update_caddy_config
 
     success "$(get_string "install_caddy_node_installation_complete")"
-    read -n 1 -s -r -p "$(get_string "install_caddy_node_press_key")"
+    pause_press_key "$(get_string "install_caddy_node_press_key")"
     exit 0
 }
 

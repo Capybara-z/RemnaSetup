@@ -7,7 +7,7 @@ source "/opt/remnasetup/scripts/common/languages.sh"
 check_bbr() {
     if sysctl net.ipv4.tcp_congestion_control | grep -q "bbr"; then
         info "$(get_string "install_bbr_already_configured")"
-        read -n 1 -s -r -p "$(get_string "install_bbr_press_key")"
+        pause_press_key "$(get_string "install_bbr_press_key")"
         exit 0
         return 1
     fi
@@ -28,7 +28,7 @@ main() {
     fi
 
     install_bbr
-    read -n 1 -s -r -p "$(get_string "install_bbr_press_key")"
+    pause_press_key "$(get_string "install_bbr_press_key")"
     exit 0
 }
 

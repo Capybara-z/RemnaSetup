@@ -7,6 +7,23 @@ source "/opt/remnasetup/scripts/common/languages.sh"
 check_nginx() {
     if command -v nginx >/dev/null 2>&1; then
         info "$(get_string "install_nginx_node_already_installed")"
+
+        if [[ "$UPDATE_CONFIG" == "y" || "$UPDATE_CONFIG" == "Y" || "$UPDATE_CONFIG" == "true" ]]; then
+            info "UPDATE_CONFIG=$UPDATE_CONFIG, will update..."
+            return 0
+        fi
+
+        if [[ "$UPDATE_CONFIG" == "n" || "$UPDATE_CONFIG" == "N" || "$UPDATE_CONFIG" == "false" ]]; then
+            info "UPDATE_CONFIG=$UPDATE_CONFIG, skipping..."
+            pause_press_key "$(get_string "install_nginx_node_press_key")"
+            exit 0
+        fi
+
+        if is_non_interactive; then
+            info "Non-interactive mode: UPDATE_CONFIG not set, defaulting to update."
+            return 0
+        fi
+
         while true; do
             question "$(get_string "install_nginx_node_update_config")"
             UPDATE_CONFIG="$REPLY"
@@ -14,7 +31,7 @@ check_nginx() {
                 return 0
             elif [[ "$UPDATE_CONFIG" == "n" || "$UPDATE_CONFIG" == "N" ]]; then
                 info "$(get_string "install_nginx_node_already_installed")"
-                read -n 1 -s -r -p "$(get_string "install_nginx_node_press_key")"
+                pause_press_key "$(get_string "install_nginx_node_press_key")"
                 exit 0
                 return 1
             else
@@ -86,23 +103,39 @@ get_certificates() {
 
     case $cert_method in
         1)
-            while true; do
-                question "$(get_string "install_nginx_node_enter_cf_token")"
-                CF_API_KEY="$REPLY"
-                if [[ -n "$CF_API_KEY" ]]; then
-                    break
+            if [[ -n "$CF_API_KEY" ]]; then
+                info "CF_API_KEY=***"
+            else
+                if is_non_interactive; then
+                    error "CF_API_KEY environment variable is required in non-interactive mode."
+                    exit 1
                 fi
-                warn "$(get_string "install_nginx_node_token_empty")"
-            done
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_cf_token")"
+                    CF_API_KEY="$REPLY"
+                    if [[ -n "$CF_API_KEY" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_nginx_node_token_empty")"
+                done
+            fi
 
-            while true; do
-                question "$(get_string "install_nginx_node_enter_cf_email")"
-                CF_EMAIL="$REPLY"
-                if [[ -n "$CF_EMAIL" ]]; then
-                    break
+            if [[ -n "$CF_EMAIL" ]]; then
+                info "CF_EMAIL=$CF_EMAIL"
+            else
+                if is_non_interactive; then
+                    error "CF_EMAIL environment variable is required in non-interactive mode."
+                    exit 1
                 fi
-                warn "$(get_string "install_nginx_node_email_empty")"
-            done
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_cf_email")"
+                    CF_EMAIL="$REPLY"
+                    if [[ -n "$CF_EMAIL" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_nginx_node_email_empty")"
+                done
+            fi
 
             install_certbot_dns_cloudflare
 
@@ -136,14 +169,22 @@ EOL
             CERT_DOMAIN="$base_domain"
             ;;
         2)
-            while true; do
-                question "$(get_string "install_nginx_node_enter_email")"
-                LE_EMAIL="$REPLY"
-                if [[ -n "$LE_EMAIL" ]]; then
-                    break
+            if [[ -n "$LE_EMAIL" ]]; then
+                info "LE_EMAIL=$LE_EMAIL"
+            else
+                if is_non_interactive; then
+                    error "LE_EMAIL environment variable is required in non-interactive mode."
+                    exit 1
                 fi
-                warn "$(get_string "install_nginx_node_email_empty")"
-            done
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_email")"
+                    LE_EMAIL="$REPLY"
+                    if [[ -n "$LE_EMAIL" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_nginx_node_email_empty")"
+                done
+            fi
 
             systemctl stop nginx 2>/dev/null || true
 
@@ -162,23 +203,39 @@ EOL
             CERT_DOMAIN="$domain"
             ;;
         3)
-            while true; do
-                question "$(get_string "install_nginx_node_enter_gcore_token")"
-                GCORE_API_KEY="$REPLY"
-                if [[ -n "$GCORE_API_KEY" ]]; then
-                    break
+            if [[ -n "$GCORE_API_KEY" ]]; then
+                info "GCORE_API_KEY=***"
+            else
+                if is_non_interactive; then
+                    error "GCORE_API_KEY environment variable is required in non-interactive mode."
+                    exit 1
                 fi
-                warn "$(get_string "install_nginx_node_token_empty")"
-            done
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_gcore_token")"
+                    GCORE_API_KEY="$REPLY"
+                    if [[ -n "$GCORE_API_KEY" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_nginx_node_token_empty")"
+                done
+            fi
 
-            while true; do
-                question "$(get_string "install_nginx_node_enter_email")"
-                LE_EMAIL="$REPLY"
-                if [[ -n "$LE_EMAIL" ]]; then
-                    break
+            if [[ -n "$LE_EMAIL" ]]; then
+                info "LE_EMAIL=$LE_EMAIL"
+            else
+                if is_non_interactive; then
+                    error "LE_EMAIL environment variable is required in non-interactive mode."
+                    exit 1
                 fi
-                warn "$(get_string "install_nginx_node_email_empty")"
-            done
+                while true; do
+                    question "$(get_string "install_nginx_node_enter_email")"
+                    LE_EMAIL="$REPLY"
+                    if [[ -n "$LE_EMAIL" ]]; then
+                        break
+                    fi
+                    warn "$(get_string "install_nginx_node_email_empty")"
+                done
+            fi
 
             install_certbot_dns_gcore
 
@@ -286,48 +343,97 @@ main() {
         return 1
     fi
 
-    while true; do
-        question "$(get_string "install_nginx_node_enter_domain")"
-        DOMAIN="$REPLY"
-        if [[ -n "$DOMAIN" ]]; then
-            break
+    if [[ -n "$DOMAIN" ]]; then
+        info "DOMAIN=$DOMAIN"
+    else
+        if is_non_interactive; then
+            error "DOMAIN environment variable is required in non-interactive mode."
+            exit 1
         fi
-        warn "$(get_string "install_nginx_node_domain_empty")"
-    done
+        while true; do
+            question "$(get_string "install_nginx_node_enter_domain")"
+            DOMAIN="$REPLY"
+            if [[ -n "$DOMAIN" ]]; then
+                break
+            fi
+            warn "$(get_string "install_nginx_node_domain_empty")"
+        done
+    fi
 
-    while true; do
-        question "$(get_string "install_nginx_node_enter_port")"
-        MONITOR_PORT="$REPLY"
-        MONITOR_PORT=${MONITOR_PORT:-8443}
+    if [[ -n "$MONITOR_PORT" ]]; then
         if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
-            break
+            info "MONITOR_PORT=$MONITOR_PORT"
+        else
+            error "$(get_string "install_nginx_node_port_must_be_number")"
+            exit 1
         fi
-        warn "$(get_string "install_nginx_node_port_must_be_number")"
-    done
+    else
+        if is_non_interactive; then
+            MONITOR_PORT=8443
+            info "Non-interactive mode: MONITOR_PORT defaulted to $MONITOR_PORT"
+        else
+            while true; do
+                question "$(get_string "install_nginx_node_enter_port")"
+                MONITOR_PORT="$REPLY"
+                MONITOR_PORT=${MONITOR_PORT:-8443}
+                if [[ "$MONITOR_PORT" =~ ^[0-9]+$ ]]; then
+                    break
+                fi
+                warn "$(get_string "install_nginx_node_port_must_be_number")"
+            done
+        fi
+    fi
 
-    while true; do
-        question "$(get_string "install_nginx_node_use_proxy_protocol")"
-        USE_PROXY_PROTOCOL="$REPLY"
+    if [[ -n "$USE_PROXY_PROTOCOL" ]]; then
         if [[ "$USE_PROXY_PROTOCOL" == "y" || "$USE_PROXY_PROTOCOL" == "Y" || "$USE_PROXY_PROTOCOL" == "n" || "$USE_PROXY_PROTOCOL" == "N" ]]; then
-            break
+            info "USE_PROXY_PROTOCOL=$USE_PROXY_PROTOCOL"
+        else
+            error "USE_PROXY_PROTOCOL must be y/n"
+            exit 1
         fi
-        warn "$(get_string "install_nginx_node_please_enter_yn")"
-    done
+    else
+        if is_non_interactive; then
+            USE_PROXY_PROTOCOL="n"
+            info "Non-interactive mode: USE_PROXY_PROTOCOL defaulted to n"
+        else
+            while true; do
+                question "$(get_string "install_nginx_node_use_proxy_protocol")"
+                USE_PROXY_PROTOCOL="$REPLY"
+                if [[ "$USE_PROXY_PROTOCOL" == "y" || "$USE_PROXY_PROTOCOL" == "Y" || "$USE_PROXY_PROTOCOL" == "n" || "$USE_PROXY_PROTOCOL" == "N" ]]; then
+                    break
+                fi
+                warn "$(get_string "install_nginx_node_please_enter_yn")"
+            done
+        fi
+    fi
 
-    echo ""
-    info "$(get_string "install_nginx_node_cert_method_prompt")"
-    echo -e "${BLUE}1. Cloudflare DNS-01 (wildcard)${RESET}"
-    echo -e "${BLUE}2. HTTP-01 / standalone${RESET}"
-    echo -e "${BLUE}3. Gcore DNS-01 (wildcard)${RESET}"
-    echo ""
-    while true; do
-        question "$(get_string "install_nginx_node_cert_method_choose")"
-        CERT_METHOD="$REPLY"
+    if [[ -n "$CERT_METHOD" ]]; then
         if [[ "$CERT_METHOD" =~ ^[1-3]$ ]]; then
-            break
+            info "CERT_METHOD=$CERT_METHOD"
+        else
+            error "$(get_string "install_nginx_node_cert_method_invalid")"
+            exit 1
         fi
-        warn "$(get_string "install_nginx_node_cert_method_invalid")"
-    done
+    else
+        if is_non_interactive; then
+            error "CERT_METHOD environment variable is required in non-interactive mode (1=Cloudflare, 2=HTTP-01, 3=Gcore)."
+            exit 1
+        fi
+        echo ""
+        info "$(get_string "install_nginx_node_cert_method_prompt")"
+        echo -e "${BLUE}1. Cloudflare DNS-01 (wildcard)${RESET}"
+        echo -e "${BLUE}2. HTTP-01 / standalone${RESET}"
+        echo -e "${BLUE}3. Gcore DNS-01 (wildcard)${RESET}"
+        echo ""
+        while true; do
+            question "$(get_string "install_nginx_node_cert_method_choose")"
+            CERT_METHOD="$REPLY"
+            if [[ "$CERT_METHOD" =~ ^[1-3]$ ]]; then
+                break
+            fi
+            warn "$(get_string "install_nginx_node_cert_method_invalid")"
+        done
+    fi
 
     stop_caddy_if_running
 
@@ -360,7 +466,7 @@ main() {
     fi
     echo ""
 
-    read -n 1 -s -r -p "$(get_string "install_nginx_node_press_key")"
+    pause_press_key "$(get_string "install_nginx_node_press_key")"
     exit 0
 }
 

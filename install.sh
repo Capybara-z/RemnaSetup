@@ -8,6 +8,8 @@ fi
 
 TEMP_DIR=$(mktemp -d)
 
+cd /tmp || cd / || exit 1
+
 if [ -d "/opt/remnasetup" ]; then
     echo "Removing existing RemnaSetup installation..."
     echo "Удаление существующей установки RemnaSetup..."
@@ -114,4 +116,5 @@ cd /opt/remnasetup || exit 1
 
 echo "Starting RemnaSetup..."
 echo "Запуск RemnaSetup..."
-bash /opt/remnasetup/remnasetup.sh 
+bash /opt/remnasetup/remnasetup.sh "$@"
+
