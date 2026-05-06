@@ -644,7 +644,6 @@ setup_logs_and_logrotate() {
 
     if [ ! -d "/var/log/remnanode" ]; then
         mkdir -p /var/log/remnanode
-        chmod -R 777 /var/log/remnanode
         info "$(get_string "install_full_node_logs_dir_created")"
     else
         info "$(get_string "install_full_node_logs_dir_exists")"
