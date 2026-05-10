@@ -1,0 +1,17 @@
+https://$PANEL_DOMAIN {
+    handle /api/* {
+        reverse_proxy http://remnawave:$PANEL_PORT
+    }
+
+    handle {
+        basicauth {
+            $ADMIN_LOGIN $ADMIN_PASSWORD_HASH
+        }
+        reverse_proxy http://remnawave:$PANEL_PORT
+    }
+}
+
+:443 {
+    tls internal
+    respond 204
+}
