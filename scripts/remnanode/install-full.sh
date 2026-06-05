@@ -390,6 +390,10 @@ uninstall_warp_native() {
     rm -f /usr/local/bin/wgcf &>/dev/null
     rm -f wgcf-account.toml wgcf-profile.conf &>/dev/null
 
+    info "$(get_string "warp_native_removing_watchdog")"
+    rm -f /etc/cron.d/warp-native &>/dev/null
+    rm -rf /opt/warp-native &>/dev/null
+
     info "$(get_string "warp_native_removing_packages")"
     DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y wireguard &>/dev/null || true
     DEBIAN_FRONTEND=noninteractive apt-get autoremove -y &>/dev/null || true
@@ -445,10 +449,20 @@ install_warp() {
     WGCF_DOWNLOAD_URL="https://github.com/ViRb3/wgcf/releases/download/${WGCF_VERSION}/wgcf_${WGCF_VERSION#v}_linux_${WGCF_ARCH}"
     WGCF_BINARY_NAME="wgcf_${WGCF_VERSION#v}_linux_${WGCF_ARCH}"
 
-    wget -q "$WGCF_DOWNLOAD_URL" -O "$WGCF_BINARY_NAME" || {
+    if command -v wget &>/dev/null; then
+        wget -q "$WGCF_DOWNLOAD_URL" -O "$WGCF_BINARY_NAME" || {
+            error "$(get_string "warp_native_wgcf_download_failed")"
+            exit 1
+        }
+    elif command -v curl &>/dev/null; then
+        curl -sL "$WGCF_DOWNLOAD_URL" -o "$WGCF_BINARY_NAME" || {
+            error "$(get_string "warp_native_wgcf_download_failed")"
+            exit 1
+        }
+    else
         error "$(get_string "warp_native_wgcf_download_failed")"
         exit 1
-    }
+    fi
 
     chmod +x "$WGCF_BINARY_NAME" || {
         error "$(get_string "warp_native_wgcf_chmod_failed")"
@@ -503,9 +517,9 @@ install_warp() {
             fi
             
             info "$(get_string "warp_native_trying_alternative")"
-            echo | wgcf register &>/dev/null || true
+            timeout 60 bash -c 'yes | wgcf register' &>/dev/null || true
 
-    sleep 2
+            sleep 2
         fi
 
         if [[ ! -f wgcf-account.toml ]]; then
@@ -562,22 +576,9 @@ install_warp() {
     echo ""
 
     info "$(get_string "warp_native_check_ipv6")"
-
-    is_ipv6_enabled() {
-        sysctl net.ipv6.conf.all.disable_ipv6 2>/dev/null | grep -q ' = 0' || return 1
-        sysctl net.ipv6.conf.default.disable_ipv6 2>/dev/null | grep -q ' = 0' || return 1
-        ip -6 addr show scope global | grep -qv 'inet6 .*fe80::' || return 1
-        return 0
-    }
-
-    if is_ipv6_enabled; then
-        success "$(get_string "warp_native_ipv6_enabled")"
-    else
-        warn "$(get_string "warp_native_ipv6_disabled")"
-        sed -i 's/,\s*[0-9a-fA-F:]\+\/128//' /etc/wireguard/warp.conf
-        sed -i '/Address = [0-9a-fA-F:]\+\/128/d' /etc/wireguard/warp.conf
-        success "$(get_string "warp_native_ipv6_removed")"
-    fi
+    sed -i 's/,\s*[0-9a-fA-F:]\+\/128//' /etc/wireguard/warp.conf
+    sed -i '/Address = [0-9a-fA-F:]\+\/128/d' /etc/wireguard/warp.conf
+    success "$(get_string "warp_native_ipv6_removed")"
     echo ""
 
     info "$(get_string "warp_native_connect_warp")"
@@ -595,21 +596,23 @@ install_warp() {
         exit 1
     fi
 
+    handshake_ts=0
     for i in {1..10}; do
-        handshake=$(wg show warp | grep "latest handshake" | awk -F': ' '{print $2}')
-        if [[ "$handshake" == *"second"* || "$handshake" == *"minute"* ]]; then
-            success "$(get_string "warp_native_handshake_received") $handshake"
+        handshake_ts=$(wg show warp latest-handshakes 2>/dev/null | awk '{print $2}')
+        if [[ -n "$handshake_ts" && "$handshake_ts" -gt 0 ]]; then
+            age=$(( $(date +%s) - handshake_ts ))
+            success "$(get_string "warp_native_handshake_received") ${age}s ago"
             success "$(get_string "warp_native_warp_active")"
             break
         fi
         sleep 1
     done
 
-    if [[ -z "$handshake" || "$handshake" == "0 seconds ago" ]]; then
+    if [[ -z "$handshake_ts" || "$handshake_ts" -eq 0 ]]; then
         warn "$(get_string "warp_native_handshake_failed")"
     fi
 
-    curl_result=$(curl -s --interface warp https://www.cloudflare.com/cdn-cgi/trace | grep "warp=" | cut -d= -f2)
+    curl_result=$(curl -s --interface warp --max-time 5 https://www.cloudflare.com/cdn-cgi/trace | grep "warp=" | cut -d= -f2)
 
     if [[ "$curl_result" == "on" ]]; then
         success "$(get_string "warp_native_cf_response")"
@@ -624,6 +627,129 @@ install_warp() {
         exit 1
     }
     success "$(get_string "warp_native_autostart_enabled")"
+    echo ""
+
+    info "$(get_string "warp_native_setup_watchdog")"
+
+    mkdir -p /opt/warp-native/logs || {
+        error "$(get_string "warp_native_watchdog_dir_failed")"
+        exit 1
+    }
+
+    cat > /opt/warp-native/config.env <<EOF
+# warp-native watchdog configuration
+# Edited values take effect on next cron run
+
+# Handshake threshold in seconds (default: 180)
+HANDSHAKE_THRESHOLD=180
+
+# Cooldown between restarts in seconds (default: 120)
+RESTART_COOLDOWN=120
+
+# Max log lines before rotation (default: 1000)
+LOG_MAX_LINES=1000
+EOF
+
+    cat > /opt/warp-native/warp-watchdog.sh <<'WATCHDOG_EOF'
+#!/bin/bash
+
+CONFIG="/opt/warp-native/config.env"
+LOG="/opt/warp-native/logs/watchdog.log"
+COOLDOWN_FILE="/opt/warp-native/logs/.last_restart"
+
+if [[ -f "$CONFIG" ]]; then
+    source "$CONFIG"
+fi
+
+HANDSHAKE_THRESHOLD="${HANDSHAKE_THRESHOLD:-180}"
+RESTART_COOLDOWN="${RESTART_COOLDOWN:-120}"
+LOG_MAX_LINES="${LOG_MAX_LINES:-1000}"
+
+log() {
+    local level="$1"
+    local message="$2"
+    local ts
+    ts=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$ts] [$level] $message" >> "$LOG"
+}
+
+rotate_log() {
+    if [[ -f "$LOG" ]]; then
+        local lines
+        lines=$(wc -l < "$LOG")
+        if [[ $lines -gt $LOG_MAX_LINES ]]; then
+            tail -n "$LOG_MAX_LINES" "$LOG" > "${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
+        fi
+    fi
+}
+
+do_restart() {
+    local reason="$1"
+
+    if [[ -f "$COOLDOWN_FILE" ]]; then
+        local last_restart
+        last_restart=$(cat "$COOLDOWN_FILE")
+        local now
+        now=$(date +%s)
+        local diff=$(( now - last_restart ))
+        if [[ $diff -lt $RESTART_COOLDOWN ]]; then
+            log "SKIP" "Restart skipped (cooldown: ${diff}s < ${RESTART_COOLDOWN}s). Reason was: $reason"
+            return
+        fi
+    fi
+
+    log "RESTART" "Restarting wg-quick@warp. Reason: $reason"
+    systemctl restart wg-quick@warp
+    local ret=$?
+    date +%s > "$COOLDOWN_FILE"
+
+    if [[ $ret -eq 0 ]]; then
+        log "OK" "wg-quick@warp restarted successfully"
+    else
+        log "ERROR" "Failed to restart wg-quick@warp (exit code: $ret)"
+    fi
+}
+
+rotate_log
+
+if ! systemctl is-active --quiet wg-quick@warp; then
+    do_restart "systemd unit is not active"
+    exit 0
+fi
+
+handshake_ts=$(wg show warp latest-handshakes 2>/dev/null | awk '{print $2}')
+
+if [[ -z "$handshake_ts" || "$handshake_ts" -eq 0 ]]; then
+    do_restart "no handshake data"
+    exit 0
+fi
+
+now=$(date +%s)
+age=$(( now - handshake_ts ))
+
+if [[ $age -gt $HANDSHAKE_THRESHOLD ]]; then
+    do_restart "handshake too old (${age}s > ${HANDSHAKE_THRESHOLD}s)"
+    exit 0
+fi
+
+if ! ping -I warp -c 2 -W 3 1.1.1.1 &>/dev/null; then
+    do_restart "ping via warp interface failed"
+    exit 0
+fi
+
+log "OK" "WARP is healthy (handshake: ${age}s ago)"
+WATCHDOG_EOF
+
+    chmod +x /opt/warp-native/warp-watchdog.sh
+    success "$(get_string "warp_native_watchdog_created")"
+
+    cat > /etc/cron.d/warp-native <<'EOF'
+# warp-native watchdog — checks WARP tunnel health every 10 minutes
+*/10 * * * * root /opt/warp-native/warp-watchdog.sh
+EOF
+
+    chmod 644 /etc/cron.d/warp-native
+    success "$(get_string "warp_native_watchdog_cron_set")"
     echo ""
 
     restore_dns
@@ -1057,6 +1183,8 @@ main() {
         echo -e "${BOLD_CYAN}➤ $(get_string "warp_native_restart_interface"):${RESET} systemctl restart wg-quick@warp"
         echo -e "${BOLD_CYAN}➤ $(get_string "warp_native_disable_autostart"):${RESET} systemctl disable wg-quick@warp"
         echo -e "${BOLD_CYAN}➤ $(get_string "warp_native_enable_autostart_cmd"):${RESET} systemctl enable wg-quick@warp"
+        echo -e "${BOLD_CYAN}➤ $(get_string "warp_native_watchdog_log"):${RESET} tail -f /opt/warp-native/logs/watchdog.log"
+        echo -e "${BOLD_CYAN}➤ $(get_string "warp_native_watchdog_config"):${RESET} nano /opt/warp-native/config.env"
         echo ""
     fi
     
