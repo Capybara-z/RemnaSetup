@@ -199,6 +199,9 @@ LANG_STRINGS["en_backup_s3_uploading"]="Uploading to S3..."
 LANG_STRINGS["en_backup_s3_uploaded"]="Backup uploaded to S3: %s"
 LANG_STRINGS["en_backup_s3_upload_failed"]="Failed to upload backup to S3"
 LANG_STRINGS["en_backup_s3_no_config"]="S3 is not configured. Run automatic backup setup first (menu option 3)."
+LANG_STRINGS["en_backup_db_dump"]="Creating database dump..."
+LANG_STRINGS["en_backup_db_container_not_found"]="Database container %s not found or not running!"
+LANG_STRINGS["en_backup_db_dump_error"]="Error creating database dump! Make sure the DB container is running."
 
 LANG_STRINGS["ru_backup_enter_password"]="Введите пароль для архива (минимум 8 символов):"
 LANG_STRINGS["ru_backup_password_short"]="Пароль должен содержать минимум 8 символов"
@@ -220,6 +223,9 @@ LANG_STRINGS["ru_backup_s3_uploading"]="Загрузка в S3..."
 LANG_STRINGS["ru_backup_s3_uploaded"]="Бекап загружен в S3: %s"
 LANG_STRINGS["ru_backup_s3_upload_failed"]="Не удалось загрузить бекап в S3"
 LANG_STRINGS["ru_backup_s3_no_config"]="S3 не настроен. Сначала настройте автоматический бекап (пункт меню 3)."
+LANG_STRINGS["ru_backup_db_dump"]="Создаём дамп базы данных..."
+LANG_STRINGS["ru_backup_db_container_not_found"]="Контейнер базы данных %s не найден или не запущен!"
+LANG_STRINGS["ru_backup_db_dump_error"]="Ошибка создания дампа базы данных! Убедитесь, что контейнер БД запущен."
 
 # restore
 LANG_STRINGS["en_restore_start"]="Starting Remnawave restore from backup"
@@ -263,6 +269,10 @@ LANG_STRINGS["en_restore_complete"]="Restore completed successfully!"
 LANG_STRINGS["en_restore_press_key"]="Press any key to return to menu..."
 LANG_STRINGS["en_restore_configs_not_found"]="Configuration files (.env or docker-compose.yml) not found in backup archive!"
 LANG_STRINGS["en_restore_db_backup_not_found"]="Database backup file not found in backup archive!"
+LANG_STRINGS["en_restore_starting_database"]="Starting database container..."
+LANG_STRINGS["en_restore_waiting_db"]="Waiting for database to be ready..."
+LANG_STRINGS["en_restore_db_not_ready"]="Database did not become ready in time. Aborting restore."
+LANG_STRINGS["en_restore_db_restore_error"]="Error restoring database from dump!"
 
 LANG_STRINGS["ru_restore_start"]="Начинаем восстановление Remnawave из резервной копии"
 LANG_STRINGS["ru_restore_select_source"]="Выберите источник восстановления (y - локальный, n - Telegram):"
@@ -305,6 +315,10 @@ LANG_STRINGS["ru_restore_complete"]="Восстановление заверше
 LANG_STRINGS["ru_restore_press_key"]="Нажмите любую клавишу для возврата в меню..."
 LANG_STRINGS["ru_restore_configs_not_found"]="Конфигурационные файлы (.env или docker-compose.yml) не найдены в архиве резервной копии!"
 LANG_STRINGS["ru_restore_db_backup_not_found"]="Файл резервной копии базы данных не найден в архиве!"
+LANG_STRINGS["ru_restore_starting_database"]="Запускаем контейнер базы данных..."
+LANG_STRINGS["ru_restore_waiting_db"]="Ожидаем готовность базы данных..."
+LANG_STRINGS["ru_restore_db_not_ready"]="База данных не стала доступна вовремя. Восстановление прервано."
+LANG_STRINGS["ru_restore_db_restore_error"]="Ошибка восстановления базы данных из дампа!"
 
 # Remnanode
 # Remnanode-install-bbr

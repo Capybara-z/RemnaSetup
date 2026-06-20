@@ -184,47 +184,12 @@ if [ $? -ne 0 ]; then
     read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
 fi
 
-info "$(get_string "restore_backup_before")"
-RESERVE_ARCHIVE="remnawave-backup-before-restore-$DATE.7z"
-
-if [ -f "$REMWAVE_DIR/.env" ] && [ -f "$REMWAVE_DIR/docker-compose.yml" ]; then
-    cp "$REMWAVE_DIR/.env" "$BACKUP_DIR/"
-    cp "$REMWAVE_DIR/docker-compose.yml" "$BACKUP_DIR/"
-fi
-
-if docker volume inspect $DB_VOLUME &>/dev/null; then
-    docker run --rm \
-        -v ${DB_VOLUME}:/volume \
-        -v "$BACKUP_DIR":/backup \
-        alpine \
-        tar czf /backup/db_backup.tar.gz -C /volume .
-fi
-
-7z a -t7z -m0=lzma2 -mx=9 -mfb=273 -md=64m -ms=on -p"$PASSWORD" "$BACKUP_DIR/$RESERVE_ARCHIVE" "$BACKUP_DIR/db_backup.tar.gz" "$BACKUP_DIR/.env" "$BACKUP_DIR/docker-compose.yml" >/dev/null 2>&1
-rm -f "$BACKUP_DIR/db_backup.tar.gz" "$BACKUP_DIR/.env" "$BACKUP_DIR/docker-compose.yml"
-
-if [ "$SOURCE" = "telegram" ]; then
-    curl -F "chat_id=$CHAT_ID" \
-         -F document=@"$BACKUP_DIR/$RESERVE_ARCHIVE" \
-         "https://api.telegram.org/bot$BOT_TOKEN/sendDocument" >/dev/null 2>&1
-fi
-
-success "$(get_string "restore_backup_saved" "$BACKUP_DIR/$RESERVE_ARCHIVE")"
-
-if [ -d "$REMWAVE_DIR" ]; then
-    info "$(get_string "restore_stopping_containers")"
-    cd "$REMWAVE_DIR" && docker compose down
-    
-    info "$(get_string "restore_removing_old_data")"
-    docker volume rm $DB_VOLUME $REDIS_VOLUME 2>/dev/null || true
-    rm -f "$REMWAVE_DIR/.env" "$REMWAVE_DIR/docker-compose.yml"
-fi
-
 info "$(get_string "restore_restoring_configs")"
 
 ENV_FILE=$(find "$TMP_RESTORE_DIR" -name ".env" -type f 2>/dev/null | head -n1)
 COMPOSE_FILE=$(find "$TMP_RESTORE_DIR" -name "docker-compose.yml" -type f 2>/dev/null | head -n1)
-DB_BACKUP_FILE=$(find "$TMP_RESTORE_DIR" -name "remnawave-db-backup-*.tar.gz" -type f 2>/dev/null | head -n1)
+SQL_DUMP_FILE=$(find "$TMP_RESTORE_DIR" -name "remnawave-db-*.sql.gz" -type f 2>/dev/null | head -n1)
+LEGACY_DB_FILE=$(find "$TMP_RESTORE_DIR" -name "remnawave-db-backup-*.tar.gz" -type f 2>/dev/null | head -n1)
 
 if [ -z "$ENV_FILE" ] || [ -z "$COMPOSE_FILE" ]; then
     error "$(get_string "restore_configs_not_found")"
@@ -232,37 +197,106 @@ if [ -z "$ENV_FILE" ] || [ -z "$COMPOSE_FILE" ]; then
     read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
 fi
 
-if [ -z "$DB_BACKUP_FILE" ]; then
+if [ -z "$SQL_DUMP_FILE" ] && [ -z "$LEGACY_DB_FILE" ]; then
     error "$(get_string "restore_db_backup_not_found")"
     rm -rf "$WORK_DIR"
     read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
 fi
 
+info "$(get_string "restore_backup_before")"
+RESERVE_ARCHIVE="remnawave-backup-before-restore-$DATE.7z"
+RESERVE_TMP="$WORK_DIR/reserve"
+mkdir -p "$RESERVE_TMP"
+
+if [ -f "$REMWAVE_DIR/.env" ] && [ -f "$REMWAVE_DIR/docker-compose.yml" ]; then
+    cp "$REMWAVE_DIR/.env" "$RESERVE_TMP/"
+    cp "$REMWAVE_DIR/docker-compose.yml" "$RESERVE_TMP/"
+
+    CURRENT_DB_USER=$(grep -E '^POSTGRES_USER=' "$REMWAVE_DIR/.env" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'" | xargs)
+    CURRENT_DB_USER=${CURRENT_DB_USER:-postgres}
+
+    if docker ps --format '{{.Names}}' | grep -qw "$DB_CONTAINER"; then
+        docker exec "$DB_CONTAINER" pg_dumpall -c -U "$CURRENT_DB_USER" 2>/dev/null | gzip -9 > "$RESERVE_TMP/remnawave-db-$DATE.sql.gz"
+    fi
+
+    (cd "$RESERVE_TMP" && 7z a -t7z -m0=lzma2 -mx=9 -mfb=273 -md=64m -ms=on -p"$PASSWORD" "$BACKUP_DIR/$RESERVE_ARCHIVE" . >/dev/null 2>&1)
+
+    if [ "$SOURCE" = "telegram" ] && [ -f "$BACKUP_DIR/$RESERVE_ARCHIVE" ]; then
+        curl -F "chat_id=$CHAT_ID" \
+             -F document=@"$BACKUP_DIR/$RESERVE_ARCHIVE" \
+             "https://api.telegram.org/bot$BOT_TOKEN/sendDocument" >/dev/null 2>&1
+    fi
+
+    success "$(get_string "restore_backup_saved" "$BACKUP_DIR/$RESERVE_ARCHIVE")"
+fi
+rm -rf "$RESERVE_TMP"
+
+if [ -d "$REMWAVE_DIR" ]; then
+    info "$(get_string "restore_stopping_containers")"
+    cd "$REMWAVE_DIR" && docker compose down 2>/dev/null
+fi
+
+info "$(get_string "restore_removing_old_data")"
+docker volume rm $DB_VOLUME $REDIS_VOLUME 2>/dev/null || true
+rm -f "$REMWAVE_DIR/.env" "$REMWAVE_DIR/docker-compose.yml"
+
 cp "$ENV_FILE" "$REMWAVE_DIR/"
 cp "$COMPOSE_FILE" "$REMWAVE_DIR/"
 
-DB_BACKUP_DIR=$(dirname "$DB_BACKUP_FILE")
-DB_BACKUP_NAME=$(basename "$DB_BACKUP_FILE")
+NEW_DB_USER=$(grep -E '^POSTGRES_USER=' "$REMWAVE_DIR/.env" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'" | xargs)
+NEW_DB_USER=${NEW_DB_USER:-postgres}
 
-info "$(get_string "restore_starting_containers")"
-cd "$REMWAVE_DIR" && docker compose up -d
-sleep 10
+if [ -n "$SQL_DUMP_FILE" ]; then
+    info "$(get_string "restore_starting_database")"
+    cd "$REMWAVE_DIR" && docker compose up -d $DB_CONTAINER
 
-info "$(get_string "restore_stopping_containers_again")"
-docker compose down
+    info "$(get_string "restore_waiting_db")"
+    DB_READY=false
+    for _ in $(seq 1 60); do
+        if docker exec "$DB_CONTAINER" pg_isready -U "$NEW_DB_USER" >/dev/null 2>&1; then
+            DB_READY=true
+            break
+        fi
+        sleep 2
+    done
 
-info "$(get_string "restore_clearing_database")"
-docker run --rm \
-    -v ${DB_VOLUME}:/volume \
-    alpine \
-    sh -c "rm -rf /volume/*"
+    if [ "$DB_READY" != true ]; then
+        error "$(get_string "restore_db_not_ready")"
+        rm -rf "$WORK_DIR"
+        read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
+    fi
 
-info "$(get_string "restore_restoring_database")"
-docker run --rm \
-    -v ${DB_VOLUME}:/volume \
-    -v "$DB_BACKUP_DIR":/backup \
-    alpine \
-    tar xzf /backup/$DB_BACKUP_NAME -C /volume
+    info "$(get_string "restore_restoring_database")"
+    gunzip -c "$SQL_DUMP_FILE" | docker exec -i "$DB_CONTAINER" psql -q -U "$NEW_DB_USER" -d postgres >/dev/null 2>"$WORK_DIR/restore_errors.log"
+    if [ "${PIPESTATUS[1]}" -ne 0 ]; then
+        error "$(get_string "restore_db_restore_error")"
+        [ -f "$WORK_DIR/restore_errors.log" ] && tail -n 20 "$WORK_DIR/restore_errors.log"
+        rm -rf "$WORK_DIR"
+        read -n 1 -s -r -p "$(get_string "restore_press_key")"; exit 1
+    fi
+else
+    info "$(get_string "restore_starting_containers")"
+    cd "$REMWAVE_DIR" && docker compose up -d
+    sleep 10
+
+    info "$(get_string "restore_stopping_containers_again")"
+    docker compose down
+
+    info "$(get_string "restore_clearing_database")"
+    docker run --rm \
+        -v ${DB_VOLUME}:/volume \
+        alpine \
+        sh -c "rm -rf /volume/*"
+
+    info "$(get_string "restore_restoring_database")"
+    LEGACY_DIR=$(dirname "$LEGACY_DB_FILE")
+    LEGACY_NAME=$(basename "$LEGACY_DB_FILE")
+    docker run --rm \
+        -v ${DB_VOLUME}:/volume \
+        -v "$LEGACY_DIR":/backup \
+        alpine \
+        tar xzf /backup/$LEGACY_NAME -C /volume
+fi
 
 info "$(get_string "restore_removing_temp")"
 rm -rf "$WORK_DIR"

@@ -6,10 +6,10 @@ source "/opt/remnasetup/scripts/common/languages.sh"
 
 BACKUP_DIR="/opt/backups"
 DATE=$(date +%F_%H-%M-%S)
-DB_VOLUME="remnawave-db-data"
+DB_CONTAINER="remnawave-db"
 REMWAVE_DIR="/opt/remnawave"
 
-DB_TAR="remnawave-db-backup-$DATE.tar.gz"
+DB_DUMP="remnawave-db-$DATE.sql.gz"
 FINAL_ARCHIVE="remnawave-backup-$DATE.7z"
 TMP_DIR="$BACKUP_DIR/tmp-$DATE"
 
@@ -44,7 +44,7 @@ fi
 
 echo
 
-for cmd in docker tar 7z; do
+for cmd in docker 7z; do
     if ! command -v $cmd &>/dev/null; then
         warn "$(get_string "backup_cmd_not_found" "$cmd")"
         if command -v apt-get &>/dev/null; then
@@ -69,8 +69,8 @@ for cmd in docker tar 7z; do
     fi
 done
 
-if ! docker volume inspect $DB_VOLUME &>/dev/null; then
-    error "$(get_string "backup_volume_not_found" "$DB_VOLUME")"
+if ! docker ps --format '{{.Names}}' | grep -qw "$DB_CONTAINER"; then
+    error "$(get_string "backup_db_container_not_found" "$DB_CONTAINER")"
     read -n 1 -s -r -p "$(get_string "backup_press_key")"; exit 1
 fi
 
@@ -89,14 +89,18 @@ if [ ! -f "$REMWAVE_DIR/docker-compose.yml" ]; then
     read -n 1 -s -r -p "$(get_string "backup_press_key")"; exit 1
 fi
 
+DB_USER=$(grep -E '^POSTGRES_USER=' "$REMWAVE_DIR/.env" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'" | xargs)
+DB_USER=${DB_USER:-postgres}
+
 mkdir -p "$TMP_DIR"
 
-info "$(get_string "backup_volume" "$DB_VOLUME")"
-docker run --rm \
-    -v ${DB_VOLUME}:/volume \
-    -v "$TMP_DIR":/backup \
-    alpine \
-    tar czf /backup/$DB_TAR -C /volume .
+info "$(get_string "backup_db_dump")"
+docker exec "$DB_CONTAINER" pg_dumpall -c -U "$DB_USER" | gzip -9 > "$TMP_DIR/$DB_DUMP"
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    error "$(get_string "backup_db_dump_error")"
+    rm -rf "$TMP_DIR"
+    read -n 1 -s -r -p "$(get_string "backup_press_key")"; exit 1
+fi
 
 info "$(get_string "backup_copying_configs")"
 cp "$REMWAVE_DIR/.env" "$TMP_DIR/"
