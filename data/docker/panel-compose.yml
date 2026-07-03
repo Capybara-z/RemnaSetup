@@ -41,9 +41,10 @@ services:
         condition: service_healthy
 
   remnawave-db:
-    image: postgres:17.6
+    image: postgres:18.4
     container_name: remnawave-db
     hostname: remnawave-db
+    shm_size: 512mb
     <<: [*common, *logging, *env]
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -53,7 +54,7 @@ services:
     ports:
       - 127.0.0.1:6767:5432
     volumes:
-      - remnawave-db-data:/var/lib/postgresql/data
+      - remnawave-db-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 3s
