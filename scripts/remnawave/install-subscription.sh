@@ -54,6 +54,7 @@ install_caddy_for_subscription() {
 
         cat > Caddyfile << EOF
 https://$SUB_DOMAIN {
+    encode
     reverse_proxy * http://127.0.0.1:$SUB_PORT
 }
 
@@ -109,6 +110,7 @@ update_caddyfile_with_subscription() {
         awk -v sub_domain="$SUB_DOMAIN" -v sub_port="$SUB_PORT" -v proxy="$proxy_target" '
             /^:443 {/ {
                 print "https://" sub_domain " {"
+                print "    encode"
                 print "    reverse_proxy * http://" proxy ":" sub_port
                 print "}"
                 print ""
